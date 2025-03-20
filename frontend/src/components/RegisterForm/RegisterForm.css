@@ -1,0 +1,19 @@
+.register-form-container {
+    background-color: #ffffff;
+    width: 30vw;
+}
+
+.register-form {
+    max-width: 40vw;
+    width: 100%;
+    border-radius: 30px;
+}
+
+.register-form .btn {
+    border-radius: 20px;
+    max-width: 15vw;
+}
+
+.form-control {
+    width: 15vw;
+}
