@@ -15,3 +15,35 @@
 .login-page button {
     margin-top: 20px;
 }
+
+/* קונטיינר כללי של הדף */
+.login-page {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; 
+    align-items: center; 
+    height: 100vh; 
+    background-color: #ffffff; 
+    
+}
+
+/* קונטיינר של הלוגו והכיתוב */
+.logo-container {
+    text-align: center; 
+    margin-right: 12vw;
+}
+
+/* עיצוב הלוגו */
+.login-logo {
+    width: 300px; 
+    height: auto;
+}
+
+/* טקסט הברכה */
+.welcome-text {
+    font-size: 18px;
+    color: #333333; 
+    max-width: 80%;
+    margin: 0 auto; 
+    line-height: 1.5; 
+}

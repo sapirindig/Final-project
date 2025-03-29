@@ -7,6 +7,7 @@ import { StatusCodes } from 'http-status-codes';
 import './LoginForm.css';
 import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 
+
 interface LoginFormProps {
     toggleForm: () => void;
 }
@@ -83,8 +84,8 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
                             required
                         />
                     </div>
-                    <button type="submit" className="btn btn-primary w-100 mb-2 rounded-pill">Login</button>
-                    <button type="button" className="btn btn-secondary w-100 rounded-pill" onClick={toggleForm}>Register</button>
+                    <button type="submit" className="btn btn-login w-100 mb-2 rounded-pill">Login</button>
+                    <button type="button" className="btn btn-register w-100 rounded-pill" onClick={toggleForm}>Register</button>
                     <div className="google-login-wrapper">
                         <GoogleLogin 
                             onSuccess={handleGoogleLoginSuccess}
