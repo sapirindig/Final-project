@@ -1,0 +1,90 @@
+/* סגנון כללי לתיבת הצ'אט */
+.chat-box {
+    width: 80%; /* רוחב רחב יותר שמתאים לאתר */
+    max-width: 800px; /* הגבלת רוחב מקסימלי */
+    margin: 20px auto;
+    background-color: #f9f9f9;
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* סגנון של כל הודעה */
+.message-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.message {
+    padding: 10px 15px;
+    border-radius: 15px;
+    max-width: 70%;
+    word-wrap: break-word;
+    font-size: 16px;
+}
+
+.outgoing {
+    background-color: #6a2cfc; /* צבע סגול להודעות יוצאות */
+    color: white;
+    align-self: flex-end;
+    border-bottom-left-radius: 0;
+}
+
+.incoming {
+    background-color: #e4e4e4; /* צבע אפור להודעות נכנסות */
+    color: black;
+    align-self: flex-start;
+}
+
+/* סגנון לתיבת הקלט */
+.input-area {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+}
+
+.input-area input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 30px;
+    border: 1px solid #ccc;
+    font-size: 16px;
+    outline: none;
+    transition: border 0.3s;
+}
+
+.input-area input:focus {
+    border-color: #6a2cfc; /* צבע סגול בזמן ריכוז בתיבת הקלט */
+}
+
+.input-area button {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+}
+
+.input-area button img {
+    width: 24px;
+    height: 24px;
+}
+
+.attachment {
+    cursor: pointer;
+    padding: 5px;
+}
+
+/* סגנון להודעות בזמן ריחוף */
+.message:hover {
+    background-color: #d8b6ff; /* צבע סגול בהיר יותר בזמן ריחוף */
+    transition: background-color 0.3s;
+}
+
+/* סגנון למראה של "הודעות יזומות" (כמו שנראה בתמונה) */
+input[type="text"] {
+    box-sizing: border-box;
+}

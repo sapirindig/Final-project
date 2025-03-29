@@ -3,6 +3,7 @@ import { UserPage } from "../views/UserPage/UserPage";
 import { UserPosts } from "../views/UserPosts/UserPosts";
 import LoginPage from "../views/LoginPage/LoginPage";
 import HomePage from "../views/HomePage/HomePage";
+import CreateContentPage from "../views/CreateContentPage/CreateContentPage";
 
 interface Page {
     path: string,
@@ -31,6 +32,10 @@ const pages: Page [] = [
         element: <HomePage />,
         name: "Home",
     },
+    {
+          path: "/create-content",
+          element: <CreateContentPage />,
+          name: "Create Content",},
 ];
 
 export { pages };

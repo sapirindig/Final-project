@@ -1,0 +1,61 @@
+/* סגנון כללי לסרגל הכלים */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 250px;  /* רוחב הסרגל */
+    height: 100%;
+    background-color: #f4f4f4; /* צבע רקע בהיר */
+    padding-top: 20px;
+    border-radius: 10px 0 0 10px;
+    box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    overflow-y: auto; /* לוודא שהסרגל לא יצא מהמסך */
+}
+
+/* סגנון הלוגו */
+.logo img {
+    width: 80%;
+    display: block;
+    margin: 0 auto 50px auto; /* הוספנו רווח גדול יותר למטה של הלוגו */
+}
+
+/* סגנון של כל פריט בתפריט */
+.menu-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 10px 15px;  /* הקטנת הרוחב של כל שדה */
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 25px; /* מעגלים את הפינות של החלק הסגול */
+    transition: background-color 0.3s ease, color 0.3s ease;
+    width: auto;
+    max-width: 200px;  /* הגבלת רוחב של כל שדה */
+    margin-left: 15px; /* רווח בצד השמאלי */
+}
+
+/* סגנון עבור האייקונים */
+.menu-item img {
+    width: 24px;
+    height: 24px;
+    margin-right: 15px;
+}
+
+/* שינוי צבע רקע וריחוף על פריטי התפריט */
+.menu-item:hover {
+    background-color: #c77dff;  /* צבע סגול בריחוף */
+    color: white;
+    padding: 10px 20px;  /* הגדלת ה-padding בזמן ריחוף */
+}
+
+/* סגנון של טקסט בתפריט */
+.menu-item span {
+    color: #333;
+}
+
+/* לוודא שהתוכן בצד ימין לא יכוסה על ידי הסרגל */
+body {
+    margin-left: 250px;  /* רווח מצד שמאל של התוכן כדי לא להיתקל בסרגל */
+}

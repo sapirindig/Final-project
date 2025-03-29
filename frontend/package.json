@@ -21,7 +21,7 @@
     "http-status-codes": "^2.3.0",
     "jwt-decode": "^4.0.0",
     "react": "^19.0.0",
-    "react-router-dom": "^7.3.0",
+    "react-router-dom": "^7.4.0",
     "sweetalert2": "^11.17.2",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"
