@@ -9,10 +9,6 @@ const HomePage: React.FC = () => {
         <h1>Welcome to the Home Page</h1>
       </header>
       <main className="homepage-main">
-        <div className="posts-box">
-          <textarea placeholder="What's happening?" />
-          <button>Tweet</button>
-        </div>
         <SiteVisits />
       </main>
     </div>

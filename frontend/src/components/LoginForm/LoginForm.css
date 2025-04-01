@@ -1,17 +1,50 @@
+
 .login-form-container {
     background-color: #ffffff;
-    width: 30vw;
+    width: 35vw;
+    border-radius: 15px;
+    padding: 30px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    margin-right: 12vw;
+    
 }
 
 .login-form {
-    max-width: 40vw;
+    max-width: 60vw;
     width: 100%;
-    border-radius: 30px;
+    border-radius: 40px;
 }
 
-.login-form .btn {
-    border-radius: 20px;
-    max-width: 15vw;
+.btn-login {
+    background-color: #ff0054; 
+    color: rgb(4, 2, 2);
+    border-radius: 20px; 
+    max-width: 15vw; 
+    padding: 10px;
+    font-size: 16px;
+    border: 0.2px solid #625d5d;
+}
+.btn-login:hover {
+    background-color: #ffffff;
+    border: 0.2px solid #625d5d;
+}
+
+
+.btn-register {
+    background-color: #808080; 
+    color: rgb(0, 0, 0); 
+    border-radius: 20px; 
+    max-width: 15vw; 
+    padding: 10px;
+    font-size: 16px;
+    border: 0.2px solid #625d5d;
+}
+.btn-register:hover {
+    background-color: #ffffff;
+    border: 0.2px solid #625d5d;
 }
 
 .form-control {
@@ -24,3 +57,5 @@
     align-items: center;
     margin-top: 5%;
 }
+
+
