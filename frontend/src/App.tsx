@@ -1,20 +1,63 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { pages } from "./router";
-import { Navbar } from "./components/Navbar/Navbar";
-import { AuthProvider } from "./contexts/AuthContext";
+import { AuthProvider, AuthContext } from "./contexts/AuthContext";
+import Sidebar from "./components/Sidebar/Sidebar";
+import { useContext } from "react";
+import LoginPage from "./views/LoginPage/LoginPage";
 
-const App: React.FC = () => {
+interface ProtectedRouteProps {
+    children: React.ReactNode;
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
+    const { isLoggedIn } = useContext(AuthContext);
+    if (!isLoggedIn) {
+        return <Navigate to="/" replace />;
+    }
+    return <>{children}</>;
+};
+
+const AppContent: React.FC = () => {
+    const { isLoggedIn } = useContext(AuthContext);
     
     return (
+        <BrowserRouter>
+            <div className="app-container">
+                {isLoggedIn && <Sidebar />}
+                <div className="main-content">
+                    <Routes>
+                        <Route 
+                            path="/" 
+                            element={
+                                isLoggedIn ? (
+                                    <Navigate to="/homepage" replace />
+                                ) : (
+                                    <LoginPage />
+                                )
+                            } 
+                        />
+                        {pages.filter(page => page.path !== "/").map((page) => (
+                            <Route 
+                                key={page.path} 
+                                path={page.path} 
+                                element={
+                                    <ProtectedRoute>
+                                        {page.element}
+                                    </ProtectedRoute>
+                                } 
+                            />
+                        ))}    
+                    </Routes>
+                </div>
+            </div>
+        </BrowserRouter>
+    );
+};
+
+const App: React.FC = () => {
+    return (
         <AuthProvider>
-            <BrowserRouter>
-                <Navbar />
-                <Routes>
-                    {pages.map((page) => (
-                        <Route key={page.path} path={page.path} element={page.element} />
-                    ))}    
-                </Routes>
-            </BrowserRouter>
+            <AppContent />
         </AuthProvider>
     );
 };

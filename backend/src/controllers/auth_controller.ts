@@ -84,43 +84,60 @@ const login = async (req: Request, res: Response) => {
 const googleLogin = async (req: Request, res: Response) => {
     const { token } = req.body;
 
+    if (!process.env.GOOGLE_CLIENT_ID) {
+        res.status(500).json({ message: "Google Client ID not configured" });
+        return;
+    }
+
     try {
+        const client = new OAuth2Client({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+        });
+
         const ticket = await client.verifyIdToken({
             idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID,
         });
 
         const payload = ticket.getPayload();
-        if (!payload) {
+        if (!payload || !payload.email) {
             res.status(400).json({ message: 'Invalid Google token' });
-
             return;
-        };
+        }
 
         const { sub, email, name } = payload;
-        let user = await userModel.findOne({ googleId: sub });
-
-        console.log("reached 3");
+        // First try to find user by email
+        let user = await userModel.findOne({ 
+            $or: [
+                { googleId: sub },
+                { email: email }
+            ]
+        });
 
         if (!user) {
+            // Create new user if not found
             user = new userModel({
                 username: name,
                 email: email,
                 googleId: sub,
             });
-
             await user.save();
-        } else {
-            console.log("User found:", user);
+        } else if (!user.googleId) {
+            // Update existing user with googleId if they signed up with email before
+            user.googleId = sub;
+            await user.save();
         }
 
         if (!process.env.TOKEN_SECRET) {
-            res.status(500).json({ message: "Server Error" });
-
+            res.status(500).json({ message: "Token secret not configured" });
             return;
-        };
+        }
         
-        const jwtToken = jwt.sign({ _id: user._id }, process.env.TOKEN_SECRET, { expiresIn: process.env.TOKEN_EXPIRATION });
+        const jwtToken = jwt.sign(
+            { _id: user._id }, 
+            process.env.TOKEN_SECRET, 
+            { expiresIn: process.env.TOKEN_EXPIRATION }
+        );
 
         res.status(200).json({
             username: user.username,
@@ -129,8 +146,9 @@ const googleLogin = async (req: Request, res: Response) => {
             token: jwtToken,
         });
     } catch (error) {
+        console.error('Google login error:', error);
         res.status(500).json({ message: 'Error logging in with Google' });
-    };
+    }
 };
 
 const logout = (req: Request, res: Response) => {

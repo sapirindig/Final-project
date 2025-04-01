@@ -41,7 +41,6 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
     const handleGoogleLoginSuccess = async (credentialResponse: CredentialResponse) => {
         if (credentialResponse.credential) {
             try {
-                console.log(credentialResponse.credential);
                 const response = await api.googleLogin(credentialResponse.credential);
 
                 if (response && response.status === StatusCodes.OK) {

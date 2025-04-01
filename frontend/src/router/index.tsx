@@ -23,17 +23,12 @@ const pages: Page [] = [
         name: "User",
     },
     {
-        path: "/userPosts",
-        element: <UserPosts />,
-        name: "Your posts",
-    },
-    {
         path: "/homePage",
         element: <HomePage />,
         name: "Home",
     },
     {
-          path: "/create-content",
+          path: "/createcontent",
           element: <CreateContentPage />,
           name: "Create Content",},
 ];

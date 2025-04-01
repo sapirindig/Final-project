@@ -11,6 +11,7 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
     }
 
     if (!process.env.TOKEN_SECRET) {
+        console.log("reached 5");
         res.status(500).json({ message: 'Server Error' });
         return;
     }
