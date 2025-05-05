@@ -1,6 +1,5 @@
 import "./Sidebar.css";
 import { useNavigate } from "react-router-dom";
-//import searchIcon from "../../Images/search.png";
 import homeIcon from "../../Images/home.png";
 import profileIcon from "../../Images/user.png";
 import supportIcon from "../../Images/support.png";
@@ -9,31 +8,36 @@ import createContentIcon from "../../Images/create-content.png";
 import { useContext } from "react";
 import { AuthContext } from "../../contexts/AuthContext";
 
-const Sidebar = () => {
+// הוספת תמיכה בפרופס
+type SidebarProps = {
+  className?: string;
+};
+
+const Sidebar = ({ className = "" }: SidebarProps) => {
   const navigate = useNavigate();
   const { setIsLoggedIn } = useContext(AuthContext);
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
+    localStorage.removeItem("user");
     setIsLoggedIn(false);
-    navigate('/');
+    navigate("/");
   };
 
   return (
-    <div className="sidebar">
+    <div className={`sidebar ${className}`}>
       <div className="logo">
         <img src={logo} alt="Logo" />
       </div>
       <div className="menu-items">
-        <div className="menu-item create-content" onClick={() => navigate('/createcontent')}>
+        <div className="menu-item create-content" onClick={() => navigate("/createcontent")}>
           <img src={createContentIcon} alt="Create Content" />
           <span>Create Content</span>
         </div>
-        <div className="menu-item" onClick={() => navigate('/homepage')}>
+        <div className="menu-item" onClick={() => navigate("/homepage")}>
           <img src={homeIcon} alt="Home" />
           <span>Home</span>
         </div>
-        <div className="menu-item" onClick={() => navigate('/user')}>
+        <div className="menu-item" onClick={() => navigate("/user")}>
           <img src={profileIcon} alt="Profile" />
           <span>Profile</span>
         </div>
