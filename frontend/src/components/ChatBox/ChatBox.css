@@ -1,108 +1,133 @@
-.chat-box {
-    width: 80%;
-    max-width: 800px;
-    margin: 20px auto;
-    background-color: #f9f9f9;
-    border-radius: 20px;
-    padding: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.chat-box-container {
+    background-color: #f0f0f7; /* רקע בהיר */
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    width: 100%;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .message-container {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 20px;
-    height: 400px;
+    flex-grow: 1;
     overflow-y: auto;
-    padding-right: 10px;
+    padding-bottom: 10px;
+    scrollbar-width: thin;
+    scrollbar-color: #aaa #eee;
+}
+
+.message-container::-webkit-scrollbar {
+    width: 6px;
+}
+
+.message-container::-webkit-scrollbar-thumb {
+    background-color: #aaa;
+    border-radius: 6px;
+}
+
+.message-container::-webkit-scrollbar-track {
+    background-color: #eee;
+    border-radius: 6px;
 }
 
 .message {
-    padding: 10px 15px;
-    border-radius: 15px;
-    max-width: 70%;
-    word-wrap: break-word;
-    font-size: 16px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    max-width: 80%;
+    word-break: break-word;
 }
 
-.outgoing {
-    background-color: #6a2cfc;
-    color: white;
+.message.outgoing {
+    background-color: #e0f7fa;
+    color: #333;
     align-self: flex-end;
-    border-bottom-left-radius: 0;
 }
 
-.incoming {
-    background-color: #e4e4e4;
-    color: black;
+.message.incoming {
+    background-color: #ffffff;
+    color: #333;
     align-self: flex-start;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.input-area {
+.chat-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    object-fit: cover;
+    cursor: pointer;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.chat-input-area {
     display: flex;
     align-items: center;
-    gap: 10px;
-    border-top: 1px solid #ddd;
-    padding-top: 10px;
-}
-
-.input-area input {
-    width: 100%;
-    padding: 12px;
-    border-radius: 30px;
-    border: 1px solid #ccc;
-    font-size: 16px;
-    outline: none;
-    transition: border 0.3s;
-}
-
-.input-area input:focus {
-    border-color: #6a2cfc;
-}
-
-.input-area button {
-    background-color: transparent;
-    border: none;
-    cursor: pointer;
-    padding: 10px;
-}
-
-.input-area button img {
-    width: 24px;
-    height: 24px;
+    border-top: 1px solid #e0e0e0;
+    padding: 10px 0;
+    gap: 10px; /* ריווח בין אלמנטים */
 }
 
 .attachment {
     cursor: pointer;
-    padding: 5px;
-}
-
-.message:hover {
-    background-color: #d8b6ff;
-    transition: background-color 0.3s;
-}
-
-input[type="text"] {
-    box-sizing: border-box;
-}
-
-.typing-indicator {
-    font-style: italic;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     opacity: 0.7;
+    transition: opacity 0.3s ease;
 }
 
-.chat-image {
-    max-width: 250px;
-    max-height: 250px;
-    border-radius: 12px;
-    margin-bottom: 8px;
-    object-fit: cover;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  }
-  
-  
-  .image-preview {
+.attachment img {
+    width: 24px;
+    height: 24px;
+}
+
+.chat-input {
+    flex-grow: 1;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 1em;
+    min-height: 36px;
+    max-height: 120px;
+    line-height: 1.4;
+    resize: none;
+    overflow-y: auto;
+}
+
+.send-button {
+    background-color: #7c5dfa;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background-color 0.3s ease;
+}
+
+.send-button:hover {
+    background-color: #6544e9;
+}
+
+.send-button img {
+    width: 20px;
+    height: 20px;
+}
+
+.image-preview {
     position: fixed;
     top: 0;
     left: 0;
@@ -113,10 +138,11 @@ input[type="text"] {
     align-items: center;
     justify-content: center;
     z-index: 999;
-  }
-  
-  .image-preview img {
+    cursor: pointer;
+}
+
+.image-preview img {
     max-width: 90%;
     max-height: 90%;
-    border-radius: 12px;
-  }
+    border-radius: 8px;
+}
