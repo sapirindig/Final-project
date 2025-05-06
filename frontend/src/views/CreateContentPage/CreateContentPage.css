@@ -215,3 +215,84 @@ h1 {
     transform: rotate(360deg);
   }
 }
+
+.keywords-input {
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 15px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 0.95em;
+  color: #333;
+  background-color: #f9f9f9;
+  transition: border-color 0.3s;
+}
+
+.keywords-input:focus {
+  outline: none;
+  border-color: #7c5dfa;
+  background-color: #fff;
+}
+
+.keywords-input-area {
+    display: flex; /* ליישור שדה הקלט והכפתור בשורה */
+    align-items: center; /* ליישור אנכי של אמצע האלמנטים */
+    gap: 10px; /* מרווח בין שדה הקלט לכפתור */
+    margin-bottom: 15px; /* מרווח מתחת לאזור הקלט והכפתור */
+}
+
+.keywords-input {
+    flex-grow: 1; /* שדה הקלט יתפוס את רוב הרוחב */
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+.generate-post-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.generate-post-button {
+  background-color: #7c5dfa;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 24px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 100%;
+  max-width: 200px;
+}
+
+.generate-post-button:hover {
+  background-color: #6544e9;
+}
+
+.generate-button {
+    background-color: #7c5dfa; /* צבע רקע כמו כפתור השליחה של הצ'אט */
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+    height: 40px; /* התאמת גובה לשדה הקלט */
+}
+
+.generate-button:hover {
+    background-color: #6544e9;
+}
+
+.generate-button img {
+    width: 20px; /* גודל אייקון השליחה */
+    height: 20px;
+}
