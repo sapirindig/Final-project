@@ -4,6 +4,8 @@ import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar/Sidebar";
 import { useContext } from "react";
 import LoginPage from "./views/LoginPage/LoginPage";
+import Footer from "./components/Footer/Footer";
+
 
 interface ProtectedRouteProps {
     children: React.ReactNode;
@@ -48,6 +50,8 @@ const AppContent: React.FC = () => {
                             />
                         ))}    
                     </Routes>
+                    <Footer />
+
                 </div>
             </div>
         </BrowserRouter>
