@@ -1,5 +1,6 @@
 import Sidebar from "../../components/Sidebar/Sidebar";
 import ChatBox from "../../components/ChatBox/ChatBox";
+import { generatePostFromAI } from "../../api/openai";
 import "./CreateContentPage.css";
 import {
     AiOutlinePlayCircle,
@@ -11,7 +12,7 @@ import { BsChatLeftText, BsImageFill } from "react-icons/bs";
 import { FiEdit } from "react-icons/fi";
 import { BiText } from "react-icons/bi";
 import { useState, useEffect } from "react";
-import sendIcon from "../../Images/white-send.png"; // ייבוא אייקון השליחה
+import sendIcon from "../../Images/white-send.png";
 
 type SuggestedItem = {
     id: string;
@@ -42,7 +43,10 @@ const CreateContentPage = () => {
     const [selectedLength, setSelectedLength] = useState<string | null>(null);
 
     const [keywords, setKeywords] = useState<string>("");
-    const [keywordMessages, setKeywordMessages] = useState<KeywordMessage[]>([]); // מצב חדש עבור הודעות מילות המפתח
+    const [keywordMessages, setKeywordMessages] = useState<KeywordMessage[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    const [generatedPost, setGeneratedPost] = useState<string | null>(null); // 🆕 שמירת הפוסט שנוצר
 
     const contentTypes = ["Post", "Story", "Reel"];
     const writingStyles = ["Professional", "Humorous", "Inspiring", "Casual"];
@@ -93,20 +97,40 @@ const CreateContentPage = () => {
         }
     }, [isInstagramConnected]);
 
-    const handleGenerateContent = () => {
+    const handleSubmitKeywords = () => {
         if (keywords.trim()) {
             setKeywordMessages((prev) => [...prev, { text: keywords }]);
-            // כאן תוכל להוסיף את הלוגיקה לשליחת מילות המפתח והפרמטרים שנבחרו ל-AI
-            console.log("Generating content with keywords:", keywords, "and filters:", {
-                contentType: selectedContentType,
-                writingStyle: selectedWritingStyle,
-                concept: selectedConcept,
-                length: selectedLength,
-            });
-            // לאחר השליחה, נקה את שדה מילות המפתח:
             setKeywords("");
         }
     };
+
+    const handleGenerateContent = async () => {
+      const trimmed = keywords.trim();
+      if (trimmed) {
+          setIsLoading(true);
+          try {
+              setKeywordMessages((prev) => [...prev, { text: trimmed }]);
+              const post = await generatePostFromAI({
+                  keywords: trimmed, // השתמש בערך המעודכן
+                  contentType: selectedContentType ?? "",
+                  writingStyle: selectedWritingStyle ?? "",
+                  concept: selectedConcept ?? "",
+                  length: selectedLength ?? "",
+              });
+  
+              setGeneratedPost(post);
+              setKeywords("");
+          } catch (error) {
+              console.error("Error generating content:", error);
+              alert("There was an error generating the post. Please try again.");
+          } finally {
+              setIsLoading(false);
+          }
+      } else {
+          alert("Please enter some keywords.");
+      }
+  };
+  
 
     return (
         <div className="container">
@@ -131,18 +155,18 @@ const CreateContentPage = () => {
 
                 <div className="section ai-content-section">
                     <div className="ai-generated-content">
-                        <h2>Customize Your Preferences</h2>
+                        <h2>Let AI Write for You!</h2>
                         <div className="details">
-                            Select the filters and keywords that match your style and goals.
+                        Share your content preferences and key points — get tailored, ready-to-use content instantly.
                         </div>
-                        <div className="keyword-messages-container"> {/* קונטיינר להודעות מילות המפתח */}
+                        <div className="keyword-messages-container">
                             {keywordMessages.map((msg, index) => (
                                 <div key={index} className="keyword-message">
                                     {msg.text}
                                 </div>
                             ))}
                         </div>
-                        <div className="keywords-input-area"> {/* קונטיינר עבור שדה הקלט והכפתור */}
+                        <div className="keywords-input-area">
                             <input
                                 type="text"
                                 className="keywords-input"
@@ -150,16 +174,42 @@ const CreateContentPage = () => {
                                 value={keywords}
                                 onChange={(e) => setKeywords(e.target.value)}
                             />
-                            <button onClick={handleGenerateContent} className="generate-button">
-                                <img src={sendIcon} alt="Generate" />
+                            <button
+                                onClick={handleSubmitKeywords}
+                                className="generate-button"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <AiOutlineLoading className="loading-icon" />
+                                ) : (
+                                    <img src={sendIcon} alt="Send" />
+                                )}
                             </button>
                         </div>
 
                         <div className="generate-post-container">
-                         <button onClick={handleGenerateContent} className="generate-post-button">
-                                 GENERATE POST
-                         </button>
+                            <button
+                                onClick={handleGenerateContent}
+                                className="generate-post-button"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <AiOutlineLoading className="loading-icon" />
+                                ) : (
+                                    "GENERATE POST"
+                                )}
+                            </button>
                         </div>
+
+                        {/* ✅ תצוגה מקדימה של הפוסט שנוצר */}
+                        {generatedPost && (
+                            <div className="generated-post-preview">
+                                <h3>Generated Post Preview:</h3>
+                                <div className="post-content-box">
+                                    {generatedPost}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="filter-options">
@@ -175,7 +225,8 @@ const CreateContentPage = () => {
                                             onClick={() => setSelectedContentType(type)}
                                             className={selectedContentType === type ? "selected" : ""}
                                         >
-                                            {selectedContentType === type ? "✅ " : ""}{type}
+                                            {selectedContentType === type ? "✅ " : ""}
+                                            {type}
                                         </li>
                                     ))}
                                 </ul>
@@ -192,7 +243,8 @@ const CreateContentPage = () => {
                                             onClick={() => setSelectedWritingStyle(style)}
                                             className={selectedWritingStyle === style ? "selected" : ""}
                                         >
-                                            {selectedWritingStyle === style ? "✅ " : ""}{style}
+                                            {selectedWritingStyle === style ? "✅ " : ""}
+                                            {style}
                                         </li>
                                     ))}
                                 </ul>
@@ -209,7 +261,8 @@ const CreateContentPage = () => {
                                             onClick={() => setSelectedConcept(concept)}
                                             className={selectedConcept === concept ? "selected" : ""}
                                         >
-                                            {selectedConcept === concept ? "✅ " : ""}{concept}
+                                            {selectedConcept === concept ? "✅ " : ""}
+                                            {concept}
                                         </li>
                                     ))}
                                 </ul>
@@ -226,13 +279,12 @@ const CreateContentPage = () => {
                                             onClick={() => setSelectedLength(length)}
                                             className={selectedLength === length ? "selected" : ""}
                                         >
-                                            {selectedLength === length ? "✅ " : ""}{length}
+                                            {selectedLength === length ? "✅ " : ""}
+                                            {length}
                                         </li>
                                     ))}
                                 </ul>
                             )}
-
-                      
                         </ul>
                     </div>
                 </div>

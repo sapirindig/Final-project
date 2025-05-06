@@ -296,3 +296,21 @@ h1 {
     width: 20px; /* גודל אייקון השליחה */
     height: 20px;
 }
+.generated-post-preview {
+  margin-top: 20px;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.post-preview-content h3 {
+  font-size: 1.5em;
+  margin-bottom: 10px;
+}
+
+.post-preview-content p {
+  font-size: 1.1em;
+  color: #333;
+}
+
