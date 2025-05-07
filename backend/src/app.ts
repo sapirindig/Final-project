@@ -7,6 +7,7 @@ import userRoutes from "./routes/user_routes";
 import authRoutes from "./routes/auth_routes";
 import chatRoutes from "./routes/chat_routes";
 import analyticsRoutes from './routes/analytics_routes';
+import instagramRoutes from "./routes/instagram_routes";
 import bodyParser from "body-parser";
 import setupSwagger from "./swagger";
 import cors from "cors";
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
   res.send("Hello world!");
 });
 app.use("/api/chat", chatRoutes);
+app.use("/instagram", instagramRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 
 
