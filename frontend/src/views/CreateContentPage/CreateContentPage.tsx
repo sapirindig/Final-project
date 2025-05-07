@@ -105,31 +105,45 @@ const CreateContentPage = () => {
     };
 
     const handleGenerateContent = async () => {
-      const trimmed = keywords.trim();
-      if (trimmed) {
-          setIsLoading(true);
-          try {
-              setKeywordMessages((prev) => [...prev, { text: trimmed }]);
-              const post = await generatePostFromAI({
-                  keywords: trimmed, // השתמש בערך המעודכן
-                  contentType: selectedContentType ?? "",
-                  writingStyle: selectedWritingStyle ?? "",
-                  concept: selectedConcept ?? "",
-                  length: selectedLength ?? "",
-              });
-  
-              setGeneratedPost(post);
-              setKeywords("");
-          } catch (error) {
-              console.error("Error generating content:", error);
-              alert("There was an error generating the post. Please try again.");
-          } finally {
-              setIsLoading(false);
-          }
-      } else {
-          alert("Please enter some keywords.");
-      }
-  };
+    const trimmed = keywords.trim();
+
+    // בדיקה אם יש מילים אחרונות בשדה או הודעות שהוזנו בעבר
+    if (!trimmed && keywordMessages.length === 0) {
+        alert("Please enter some keywords.");
+        return;
+    }
+
+    // איחוד כל מילות המפתח מהשדה הנוכחי ומההיסטוריה
+    const allKeywords = [
+        ...keywordMessages.map((msg) => msg.text),
+        ...(trimmed ? [trimmed] : [])
+    ].join(", ");
+
+    setIsLoading(true);
+
+    try {
+        if (trimmed) {
+            setKeywordMessages((prev) => [...prev, { text: trimmed }]);
+        }
+
+        const post = await generatePostFromAI({
+            keywords: allKeywords,
+            contentType: selectedContentType ?? "",
+            writingStyle: selectedWritingStyle ?? "",
+            concept: selectedConcept ?? "",
+            length: selectedLength ?? "",
+        });
+
+        setGeneratedPost(post);
+        setKeywords(""); // נקה את השדה לאחר שליחה
+    } catch (error) {
+        console.error("Error generating content:", error);
+        alert("There was an error generating the post. Please try again.");
+    } finally {
+        setIsLoading(false);
+    }
+};
+
   
 
     return (
