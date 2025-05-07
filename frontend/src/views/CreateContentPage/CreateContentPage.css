@@ -1,3 +1,5 @@
+אני
+
 .container {
   display: flex;
   width: 100%;
@@ -235,14 +237,14 @@ h1 {
 }
 
 .keywords-input-area {
-    display: flex; /* ליישור שדה הקלט והכפתור בשורה */
-    align-items: center; /* ליישור אנכי של אמצע האלמנטים */
-    gap: 10px; /* מרווח בין שדה הקלט לכפתור */
-    margin-bottom: 15px; /* מרווח מתחת לאזור הקלט והכפתור */
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    margin-bottom: 15px; 
 }
 
 .keywords-input {
-    flex-grow: 1; /* שדה הקלט יתפוס את רוב הרוחב */
+    flex-grow: 1; 
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px;
@@ -274,7 +276,7 @@ h1 {
 }
 
 .generate-button {
-    background-color: #7c5dfa; /* צבע רקע כמו כפתור השליחה של הצ'אט */
+    background-color: #7c5dfa; 
     color: white;
     border: none;
     border-radius: 5px;
@@ -285,7 +287,7 @@ h1 {
     align-items: center;
     justify-content: center;
     transition: background-color 0.3s ease;
-    height: 40px; /* התאמת גובה לשדה הקלט */
+    height: 40px; 
 }
 
 .generate-button:hover {
@@ -293,7 +295,7 @@ h1 {
 }
 
 .generate-button img {
-    width: 20px; /* גודל אייקון השליחה */
+    width: 20px; 
     height: 20px;
 }
 .generated-post-preview {
@@ -313,4 +315,3 @@ h1 {
   font-size: 1.1em;
   color: #333;
 }
-
