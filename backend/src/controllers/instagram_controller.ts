@@ -3,11 +3,48 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 
-// Make sure to set these in your .env file
+// Ensure these are set in your .env file
 const IG_USER_ID = process.env.IG_USER_ID;
 const IG_ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || '';
 
+/**
+ * Fetches the latest Instagram posts (images with captions) for the connected user.
+ */
+export const getInstagramPosts = async (req: Request, res: Response): Promise<void> => {
+  if (!IG_ACCESS_TOKEN) {
+    res.status(500).json({ message: "Instagram access token not configured" });
+    return;
+  }
+
+  try {
+    const fields = "id,caption,media_type,media_url,timestamp";
+    const url = `https://graph.instagram.com/me/media?fields=${fields}&access_token=${IG_ACCESS_TOKEN}`;
+
+    const response = await axios.get(url);
+    const rawPosts = response.data as any[];
+
+    // Filter only image posts that have captions, limit to 10
+    const posts = rawPosts
+      .filter(post => post.media_type === "IMAGE" && post.caption)
+      .slice(0, 10)
+      .map(post => ({
+        id: post.id,
+        caption: post.caption,
+        media_url: post.media_url,
+        timestamp: post.timestamp
+      }));
+
+    res.status(200).json({ posts });
+  } catch (error: any) {
+    console.error("Error fetching Instagram posts:", error.response?.data || error.message);
+    res.status(500).json({ message: "Failed to fetch Instagram posts", error: error.message });
+  }
+};
+
+/**
+ * Uploads an image with caption to Instagram for the connected user.
+ */
 export const postToInstagram = async (req: Request, res: Response): Promise<void> => {
   try {
     const { caption } = req.body;
@@ -22,14 +59,11 @@ export const postToInstagram = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // 1. Upload image to Instagram (create media object)
+    // 1. Read the uploaded image file
     const imagePath = path.join(process.cwd(), imageFile.path);
-    const imageData = fs.readFileSync(imagePath);
-
-    // Instagram requires a publicly accessible URL, so use your uploads endpoint
     const imageUrl = `${PUBLIC_BASE_URL}/uploads/${imageFile.filename}`;
 
-    // Step 1: Create media object
+    // 2. Create media object on Instagram
     const mediaRes = await axios.post(
       `https://graph.facebook.com/v19.0/${IG_USER_ID}/media`,
       {
@@ -39,10 +73,9 @@ export const postToInstagram = async (req: Request, res: Response): Promise<void
       }
     );
 
-    // Tell TypeScript what you expect
     const creationId = (mediaRes.data as { id: string }).id;
 
-    // Step 2: Publish media object
+    // 3. Publish the media object
     const publishRes = await axios.post(
       `https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`,
       {
@@ -51,7 +84,7 @@ export const postToInstagram = async (req: Request, res: Response): Promise<void
       }
     );
 
-    // Optionally delete the local file after upload
+    // Optionally delete the local file
     fs.unlinkSync(imagePath);
 
     res.status(200).json({ message: "Posted to Instagram", result: publishRes.data });
