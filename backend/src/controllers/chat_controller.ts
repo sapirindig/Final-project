@@ -71,7 +71,9 @@ const chatWithAI = async (req: Request, res: Response): Promise<void> => {
           size: "1024x1024",
         });
 
-        generatedImageUrl = imageResponse.data[0].url;
+        if (imageResponse.data && imageResponse.data.length > 0) {
+          generatedImageUrl = imageResponse.data[0].url;
+        }
       }
     }
 
