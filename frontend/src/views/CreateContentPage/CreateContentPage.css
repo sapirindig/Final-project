@@ -1,4 +1,3 @@
-אני
 
 .container {
   display: flex;
@@ -58,17 +57,6 @@ h1 {
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
-.ai-generated-content .preview {
-  background-color: #f0f0f7;
-  border-radius: 8px;
-  height: 150px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  color: #aaa;
-  font-size: 1.5em;
-}
-
 .ai-generated-content .details {
   margin-top: 15px;
   color: #555;
@@ -105,81 +93,6 @@ h1 {
 .filter-options .icon {
   color: #7c5dfa;
   font-size: 1.1em;
-}
-
-.suggested-content {
-  background-color: #ffffff;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.suggested-content ul {
-  list-style: none;
-  padding: 0;
-}
-
-.suggested-content li {
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f7;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  color: #333;
-}
-
-.suggested-content li:last-child {
-  border-bottom: none;
-}
-
-.suggestion-info {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.suggestion-type {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: bold;
-  font-size: 0.9em;
-  color: #666;
-}
-
-.engagement {
-  color: #d9534f;
-  font-size: 0.85em;
-}
-
-.tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 5px;
-}
-
-.tag {
-  background-color: #eee;
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 0.75em;
-  color: #555;
-}
-
-.create-button {
-  background-color: #7c5dfa;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  font-size: 0.9em;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
-
-.create-button:hover {
-  background-color: #6544e9;
 }
 
 .connect-instagram-message {
@@ -237,18 +150,34 @@ h1 {
 }
 
 .keywords-input-area {
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-    margin-bottom: 15px; 
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
-.keywords-input {
-    flex-grow: 1; 
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 16px;
+.generate-button {
+  background-color: #7c5dfa;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.3s ease;
+  height: 40px;
+}
+
+.generate-button:hover {
+  background-color: #6544e9;
+}
+
+.generate-button img {
+  width: 20px;
+  height: 20px;
 }
 
 .generate-post-container {
@@ -275,29 +204,6 @@ h1 {
   background-color: #6544e9;
 }
 
-.generate-button {
-    background-color: #7c5dfa; 
-    color: white;
-    border: none;
-    border-radius: 5px;
-    padding: 8px 12px;
-    cursor: pointer;
-    font-size: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.3s ease;
-    height: 40px; 
-}
-
-.generate-button:hover {
-    background-color: #6544e9;
-}
-
-.generate-button img {
-    width: 20px; 
-    height: 20px;
-}
 .generated-post-preview {
   margin-top: 20px;
   padding: 15px;
@@ -314,4 +220,108 @@ h1 {
 .post-preview-content p {
   font-size: 1.1em;
   color: #333;
+}
+
+.suggested-content ul {
+  list-style: none;
+  padding: 0;
+}
+
+.suggested-content li {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f7;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  color: #333;
+}
+
+.suggested-content li:last-child {
+  border-bottom: none;
+}
+
+.suggestion-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.suggestion-type {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: bold;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.suggestion-info strong {
+  font-size: 1em;
+  color: #333;
+}
+
+.suggestion-info p {
+  font-size: 0.9em;
+  color: #555;
+  margin: 5px 0;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.tag {
+  background-color: #eee;
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.75em;
+  color: #555;
+}
+
+.create-button {
+  background-color: #7c5dfa;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  height: fit-content;
+}
+
+.create-button:hover {
+  background-color: #6544e9;
+}
+
+.suggestion-card {
+  padding: 16px;
+  margin-bottom: 24px;
+  border: 1px solid #e0e0e0;
+  border-radius: 10px;
+  background-color: #fff;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.suggestion-info {
+  flex: 1;
+}
+
+.suggestion-images {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.suggestion-image {
+  max-width: 140px;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
