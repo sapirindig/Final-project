@@ -13,28 +13,42 @@ const router = express.Router();
 
 /**
  * @swagger
- * /business-profile:
+ * /business-profile/{userId}:
  *   get:
  *     summary: Get the current user's business profile
  *     tags: [BusinessProfile]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the user
  *     responses:
  *       200:
  *         description: The business profile of the user
  *       401:
  *         description: Unauthorized
  */
-router.get("/", authMiddleware, businessProfileController.getProfile);
+router.get("/:userId", authMiddleware, businessProfileController.getProfile);
 
 /**
  * @swagger
- * /business-profile:
+ * /business-profile/{userId}:
  *   put:
  *     summary: Update or create the user's business profile
  *     tags: [BusinessProfile]
  *     security:
  *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the user
  *     requestBody:
  *       required: true
  *       content:
@@ -47,7 +61,6 @@ router.get("/", authMiddleware, businessProfileController.getProfile);
  *       401:
  *         description: Unauthorized
  */
-router.put("/", authMiddleware, businessProfileController.updateProfile);
+router.put("/:userId", authMiddleware, businessProfileController.updateProfile);
 
 export default router;
-

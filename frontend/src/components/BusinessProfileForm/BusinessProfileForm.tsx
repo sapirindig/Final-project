@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import './BusinessProfileForm.css';
+import { AuthContext } from "../../contexts/AuthContext";
 
 const tones = ["Friendly", "Professional", "Funny", "Luxury", "Inspirational", "Bold", "Minimalistic", "Emotional"];
 const platforms = ["Instagram", "Website"];
@@ -26,6 +27,13 @@ type BusinessProfileFormType = {
 };
 
 const BusinessProfileForm = () => {
+  const { isLoggedIn } = useContext(AuthContext);
+
+  const storedUser = localStorage.getItem("user");
+  const parsed = storedUser ? JSON.parse(storedUser) : null;
+  const token = parsed?.token || null;
+  const userId = parsed?._id || null;
+
   const [formData, setFormData] = useState<BusinessProfileFormType>({
     businessName: "",
     businessType: "",
@@ -94,17 +102,32 @@ const BusinessProfileForm = () => {
     });
   };
 
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!token || !userId) return;
+
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/business-profile/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setFormData(data);
+      } else {
+        console.log("No profile found or error fetching");
+      }
+    };
+
+    fetchProfile();
+  }, [token, userId]);
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const storedUser = localStorage.getItem("user");
-    const token = storedUser ? JSON.parse(storedUser).token : null;
+    if (!token || !userId) return;
 
-    if (!token) {
-      alert("No token found");
-      return;
-    }
-
-    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/business-profile`, {
+    const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/business-profile/${userId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -122,6 +145,10 @@ const BusinessProfileForm = () => {
       alert("Failed to save profile.");
     }
   };
+
+  if (!isLoggedIn || !token || !userId) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <form className="profile-form card p-6 shadow-xl rounded-2xl" onSubmit={handleSubmit}>
