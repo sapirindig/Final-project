@@ -1,59 +1,55 @@
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { pages } from "./router";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar/Sidebar";
-import { useContext } from "react";
 import LoginPage from "./views/LoginPage/LoginPage";
+import { useContext } from "react";
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isLoggedIn, isAuthLoaded } = useContext(AuthContext);
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isLoggedIn } = useContext(AuthContext);
-  if (!isLoggedIn) {
-    return <LoginPage />;
+  if (!isAuthLoaded) {
+    return <div>Loading...</div>; 
   }
-  return <>{children}</>;
+
+  return isLoggedIn ? <>{children}</> : <Navigate to="/login" replace />;
 };
 
-const AppContent: React.FC = () => {
+const AppContent = () => {
   const { isLoggedIn } = useContext(AuthContext);
+  const location = useLocation();
+
+  const hiddenSidebarRoutes = ["/login", "/register"];
+  const isSidebarHidden = hiddenSidebarRoutes.includes(location.pathname);
 
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        {isLoggedIn && <Sidebar />}
-        <div className="main-content">
-          <Routes>
-            <Route path="/" element={<LoginPage />} />
-            {pages
-              .filter((page) => page.path !== "/")
-              .map((page) => (
-                <Route
-                  key={page.path}
-                  path={page.path}
-                  element={
-                    <ProtectedRoute>
-                      {page.element}
-                    </ProtectedRoute>
-                  }
-                />
-              ))}
-          </Routes>
-        </div>
+    <div className="app-container">
+      {!isSidebarHidden && isLoggedIn && <Sidebar />}
+      <div className="main-content">
+        <Routes>
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          {pages.map((page) => (
+            <Route
+              key={page.path}
+              path={page.path}
+              element={<ProtectedRoute>{page.element}</ProtectedRoute>}
+            />
+          ))}
+        </Routes>
       </div>
-    </BrowserRouter>
+    </div>
   );
 };
 
-const App: React.FC = () => {
+const App = () => {
   return (
     <AuthProvider>
-      <AppContent />
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
     </AuthProvider>
   );
 };
 
 export default App;
-

@@ -11,7 +11,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// ✅ שליחת טקסט + תמונה לצ'אט (GPT-4o) ויצירת תמונה עם DALL-E
+
 const chatWithAI = async (req: Request, res: Response): Promise<void> => {
   const { message, imageUrl } = req.body;
 
