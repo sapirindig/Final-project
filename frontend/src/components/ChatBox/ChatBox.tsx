@@ -79,7 +79,13 @@ const ChatBox = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(e.target.value);
     hasUserStartedTyping.current = true;
-
+  
+    if (inputRef.current) {
+      inputRef.current.style.height = "auto"; 
+      const newHeight = Math.min(inputRef.current.scrollHeight, 120); 
+      inputRef.current.style.height = `${newHeight}px`;
+    }
+  
     if (
       messages.length === 1 &&
       messages[0].sender === "ai" &&
@@ -88,6 +94,7 @@ const ChatBox = () => {
       setMessages([]);
     }
   };
+  
 
   const handleImageClick = (url: string) => {
     setPreviewImage(url);

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import LoginForm from '../../components/LoginForm/LoginForm';
 import RegisterForm from '../../components/RegisterForm/RegisterForm';
 import './LoginPage.css';
-import logo from '../../Images/LogoWhite.png';
+import logo from '../../Images/Logo2.png';
 
 const LoginPage: React.FC = () => {
     const [isRegistering, setIsRegistering] = useState(false);
