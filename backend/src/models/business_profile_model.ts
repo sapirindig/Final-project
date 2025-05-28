@@ -60,13 +60,19 @@ const BusinessProfileSchema: Schema<IBusinessProfile> = new Schema({
   },
   mainColors: {
     type: [String],
-    validator: (arr: string[]) => arr.length <= 5,
+    validate: {
+      validator: (arr: string[]) => arr.length <= 5,
+      message: "Maximum 5 colors allowed",
+    },
     default: [],
   },
   emojisAllowed: { type: Boolean, default: true },
   favoriteEmojis: {
     type: [String],
-    validator: (arr: string[]) => arr.length <= 7,
+    validate: {
+      validator: (arr: string[]) => arr.length <= 7,
+      message: "Maximum 7 emojis allowed",
+    },
     default: [],
   },
   hashtagsStyle: {
@@ -77,6 +83,7 @@ const BusinessProfileSchema: Schema<IBusinessProfile> = new Schema({
   keywords: { type: String, default: "" },
   customHashtags: { type: String, default: "" },
 });
+
 
 const BusinessProfile = mongoose.model<IBusinessProfile>(
   "BusinessProfile",

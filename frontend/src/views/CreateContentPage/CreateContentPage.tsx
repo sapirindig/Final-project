@@ -2,12 +2,13 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import ChatBox from "../../components/ChatBox/ChatBox";
 import { generatePostFromAI } from "../../api/openai";
+// ודא שהנתיב ל-fetchSuggestions נכון, הוספתי אותו כעת
+import { fetchSuggestions } from "../../api/aiSuggestions";
 import "./CreateContentPage.css";
 import {
   AiOutlinePlayCircle,
   AiOutlineTag,
-  AiOutlineArrowRight,
-  AiOutlineLoading,
+  AiOutlineLoading, // AiOutlineArrowRight הוסר כי לא בשימוש
 } from "react-icons/ai";
 import { BsChatLeftText, BsImageFill } from "react-icons/bs";
 import { FiEdit } from "react-icons/fi";
@@ -19,24 +20,25 @@ type KeywordMessage = {
   text: string;
 };
 
-// Define the SuggestedItem type
+// **Define the SuggestedItem type - Adjusted based on common API responses for suggestions**
+// אני מניח ש-AI מחזיר גם contentType ו-imageUrls כפי שמוצג ב-JSX
 type SuggestedItem = {
-  id: string | number;
-  type: "post" | "story" | string;
+  _id: string; // משתמש ב-_id כי זה נפוץ ב-MongoDB ותואם את ה-JSX המקורי שלך
+  contentType: "Post" | "Story" | "Reel" | string; // הוספת contentType
   title: string;
-  content?: string;
+  content: string; // הנחתי ש-content תמיד קיים
   engagementScore?: number;
   tags?: string[];
   hashtags?: string[];
-  action?: () => void;
+  imageUrls?: string[]; // הוספת imageUrls אם ה-AI מחזיר תמונות
 };
 
 const CreateContentPage = () => {
-  const [suggestedContent, setSuggestedContent] = useState<SuggestedItem[]>([]);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
+  // השתמשתי ב-aiSuggestions כפי שהיה בקוד המקורי שהעלת עם הלוגיקה הנכונה
+  const [aiSuggestions, setAiSuggestions] = useState<SuggestedItem[]>([]);
+  const [loadingAISuggestions, setLoadingAISuggestions] = useState(true);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
 
-  // מוסיף סטייט של פתיחת תפריטים לכל קטגוריה
   const [showContentTypeOptions, setShowContentTypeOptions] = useState(false);
   const [showWritingStyleOptions, setShowWritingStyleOptions] = useState(false);
   const [showConceptOptions, setShowConceptOptions] = useState(false);
@@ -67,44 +69,51 @@ const CreateContentPage = () => {
 
   // העלאת המלצות תוכן לפי חיבור אינסטגרם
   useEffect(() => {
-    const fetchSuggestedContent = async () => {
-      setIsLoadingSuggestions(true);
+    const fetchFromApi = async () => {
+      setLoadingAISuggestions(true);
       try {
         const user = JSON.parse(
           localStorage.getItem("user") || sessionStorage.getItem("user") || "null"
         );
         const token = user?.token;
         if (!token) {
-          console.warn("No token found");
-          setSuggestedContent([]);
+          console.warn("No token found. Cannot fetch AI suggestions.");
+          setAiSuggestions([]);
           return;
         }
 
-        const res = await fetch(
-          `http://localhost:3001/api/instagram/suggested-posts?accessToken=${token}`
-        );
-        const data = await res.json();
+        // קריאה ל-fetchSuggestions מה-API שהיה חסר באימפורט
+        const data = await fetchSuggestions(token);
 
-        if (Array.isArray(data.suggestions)) {
-          setSuggestedContent(data.suggestions);
-        } else {
-          setSuggestedContent([]);
+        // **תיקון: ודא שאתה ניגש למבנה הנתונים הנכון מה-API**
+        // אם ה-API מחזיר אובייקט עם שדה 'suggestions' שהוא מערך:
+        if (data && Array.isArray(data.suggestions)) {
+          setAiSuggestions(data.suggestions);
+        } 
+        // אם ה-API מחזיר ישירות מערך:
+        else if (Array.isArray(data)) {
+          setAiSuggestions(data);
+        } 
+        // במקרה אחר:
+        else {
+          console.warn("API response for suggestions was not an array or expected object structure:", data);
+          setAiSuggestions([]);
         }
       } catch (error) {
         console.error("Error fetching suggested posts:", error);
-        setSuggestedContent([]);
+        setAiSuggestions([]);
       } finally {
-        setIsLoadingSuggestions(false);
+        setLoadingAISuggestions(false);
       }
     };
 
     if (isInstagramConnected) {
-      fetchSuggestedContent();
+      fetchFromApi();
     } else {
-      setSuggestedContent([]);
-      setIsLoadingSuggestions(false);
+      setAiSuggestions([]);
+      setLoadingAISuggestions(false);
     }
-  }, [isInstagramConnected]);
+  }, [isInstagramConnected]); // תלוי ב-isInstagramConnected
 
   const handleSubmitKeywords = () => {
     if (keywords.trim()) {
@@ -117,7 +126,7 @@ const CreateContentPage = () => {
     const trimmed = keywords.trim();
 
     if (!trimmed && keywordMessages.length === 0) {
-      alert("Please enter some keywords."); // הודעת שגיאה מפורטת
+      alert("Please enter some keywords.");
       return;
     }
 
@@ -127,6 +136,7 @@ const CreateContentPage = () => {
     ].join(", ");
 
     setIsLoading(true);
+    setGeneratedPost(null); // נקה פוסט קודם כשמייצרים חדש
 
     try {
       if (trimmed) {
@@ -145,13 +155,12 @@ const CreateContentPage = () => {
       setKeywords("");
     } catch (error) {
       console.error("Error generating content:", error);
-      alert("There was an error generating the post. Please try again."); // הודעת שגיאה מפורטת
+      alert("There was an error generating the post. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // פונקציה לעזרה בסגירת שאר התפריטים כשפותחים אחד חדש
   const closeOtherDropdowns = (except: string) => {
     if (except !== "contentType") setShowContentTypeOptions(false);
     if (except !== "writingStyle") setShowWritingStyleOptions(false);
@@ -160,217 +169,260 @@ const CreateContentPage = () => {
   };
 
   return (
-        <div className="container">
-            <Sidebar className="sidebar" />
-            <div className="main-content">
-                <div className="header-container">
-                    <h1>Create a Post</h1>
-                    <p className="subtitle">
-                        Let our smart AI help you create engaging content for your Instagram.
-                    </p>
-                    {!isInstagramConnected && (
-                        <p className="connect-instagram-message">
-                            Please connect your Instagram account to see personalized content suggestions.
-                        </p>
-                    )}
-                </div>
-
-                <div className="section">
-                    <h2 className="section-title">Talk with AI</h2>
-                    <ChatBox />
-                </div>
-
-                <div className="section ai-content-section">
-                    <div className="ai-generated-content">
-                        <h2>Let AI Write for You!</h2>
-                        <div className="details">
-                            Share your content preferences and key points — get tailored, ready-to-use content instantly.
-                        </div>
-
-                        {/* הוספתי מיכל flex לעטוף את הקלט והפילטרים */}
-                        <div className="inputs-filters-container">
-                            <div className="keywords-input-area">
-                                <input
-                                    type="text"
-                                    className="keywords-input"
-                                    placeholder="Enter keywords or phrases you want in the post..."
-                                    value={keywords}
-                                    onChange={(e) => setKeywords(e.target.value)}
-                                />
-                                <button onClick={handleSubmitKeywords} className="generate-button" disabled={isLoading}>
-                                    {isLoading ? (
-                                        <AiOutlineLoading className="loading-icon" />
-                                    ) : (
-                                        <img src={sendIcon} alt="Send" />
-                                    )}
-                                </button>
-                            </div>
-
-                            {/* תיבת הפילטרים ממוקמת כעת כאן, לצד תיבת הקלט */}
-                            <div className="filter-options">
-                                <ul>
-                                    <li
-                                        onClick={() => {
-                                            closeOtherDropdowns("contentType");
-                                            setShowContentTypeOptions(!showContentTypeOptions);
-                                        }}
-                                        className="filter-header"
-                                    >
-                                        <BsChatLeftText className="icon" /> Content Type:{" "}
-                                        <strong>{selectedContentType || "None"}</strong>
-                                    </li>
-                                    {showContentTypeOptions && (
-                                        <ul className="options-list">
-                                            {contentTypes.map((type) => (
-                                                <li
-                                                    key={type}
-                                                    className={`option-item ${selectedContentType === type ? "selected" : ""}`}
-                                                    onClick={() => {
-                                                        setSelectedContentType(type);
-                                                        setShowContentTypeOptions(false);
-                                                    }}
-                                                >
-                                                    {type}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-
-                                    <li
-                                        onClick={() => {
-                                            closeOtherDropdowns("writingStyle");
-                                            setShowWritingStyleOptions(!showWritingStyleOptions);
-                                        }}
-                                        className="filter-header"
-                                    >
-                                        <FiEdit className="icon" /> Writing Style:{" "}
-                                        <strong>{selectedWritingStyle || "None"}</strong>
-                                    </li>
-                                    {showWritingStyleOptions && (
-                                        <ul className="options-list">
-                                            {writingStyles.map((style) => (
-                                                <li
-                                                    key={style}
-                                                    className={`option-item ${selectedWritingStyle === style ? "selected" : ""}`}
-                                                    onClick={() => {
-                                                        setSelectedWritingStyle(style);
-                                                        setShowWritingStyleOptions(false);
-                                                    }}
-                                                >
-                                                    {style}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-
-                                    <li
-                                        onClick={() => {
-                                            closeOtherDropdowns("concept");
-                                            setShowConceptOptions(!showConceptOptions);
-                                        }}
-                                        className="filter-header"
-                                    >
-                                        <AiOutlinePlayCircle className="icon" /> Concept:{" "}
-                                        <strong>{selectedConcept || "None"}</strong>
-                                    </li>
-                                    {showConceptOptions && (
-                                        <ul className="options-list">
-                                            {concepts.map((concept) => (
-                                                <li
-                                                    key={concept}
-                                                    className={`option-item ${selectedConcept === concept ? "selected" : ""}`}
-                                                    onClick={() => {
-                                                        setSelectedConcept(concept);
-                                                        setShowConceptOptions(false);
-                                                    }}
-                                                >
-                                                    {concept}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-
-                                    <li
-                                        onClick={() => {
-                                            closeOtherDropdowns("length");
-                                            setShowLengthOptions(!showLengthOptions);
-                                        }}
-                                        className="filter-header"
-                                    >
-                                        <BiText className="icon" /> Length: <strong>{selectedLength || "None"}</strong>
-                                    </li>
-                                    {showLengthOptions && (
-                                        <ul className="options-list">
-                                            {lengths.map((len) => (
-                                                <li
-                                                    key={len}
-                                                    className={`option-item ${selectedLength === len ? "selected" : ""}`}
-                                                    onClick={() => {
-                                                        setSelectedLength(len);
-                                                        setShowLengthOptions(false);
-                                                    }}
-                                                >
-                                                    {len}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </ul>
-                            </div>
-                        </div>
-
-                        {generatedPost && (
-                            <div className="generated-post-preview">
-                                <h3>Generated Post Preview:</h3>
-                                <div className="post-content-box">{generatedPost}</div>
-                            </div>
-                        )}
-
-                        <div className="generate-post-container">
-                            <button
-                                onClick={handleGenerateContent}
-                                className="generate-post-button"
-                                disabled={isLoading}
-                            >
-                                {isLoading ? <AiOutlineLoading className="loading-icon" /> : "GENERATE POST"}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="section suggested-content-section">
-                    <h2>Suggested Content From Instagram</h2>
-                    {isLoadingSuggestions && <p>Loading suggestions...</p>}
-                    {!isLoadingSuggestions && suggestedContent.length === 0 && (
-                        <p>No suggestions available.</p>
-                    )}
-                    <ul className="suggested-content-list">
-                        {suggestedContent.map((item) => (
-                            <li key={item.id} className={`suggested-item suggested-${item.type}`}>
-                                <h4>{item.title}</h4>
-                                {item.content && <p>{item.content}</p>}
-                                {item.engagementScore && (
-                                    <p>Engagement Score: {item.engagementScore.toFixed(2)}</p>
-                                )}
-                                {item.tags && (
-                                    <p>
-                                        Tags: {item.tags.map((tag) => `#${tag}`).join(", ")}
-                                    </p>
-                                )}
-                                {item.hashtags && (
-                                    <p>
-                                        Hashtags: {item.hashtags.map((tag) => `#${tag}`).join(", ")}
-                                    </p>
-                                )}
-                                {item.action && (
-                                    <button onClick={item.action}>Take Action</button>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                </div>
-            </div>
+    <div className="container">
+      <Sidebar className="sidebar" />
+      <div className="main-content">
+        <div className="header-container">
+          <h1>Create a Post</h1>
+          <p className="subtitle">
+            Let our smart AI help you create engaging content for your Instagram.
+          </p>
+          {!isInstagramConnected && (
+            <p className="connect-instagram-message">
+              Please connect your Instagram account to see personalized content suggestions.
+            </p>
+          )}
         </div>
-    );
-}
+
+        <div className="section">
+          <h2 className="section-title">Talk with AI</h2>
+          <ChatBox />
+        </div>
+
+        <div className="section ai-content-section">
+          <div className="ai-generated-content">
+            <h2>Let AI Write for You!</h2>
+            <div className="details">
+              Share your content preferences and key points — get tailored, ready-to-use content instantly.
+            </div>
+
+            <div className="inputs-filters-container">
+              <div className="keywords-input-area">
+                <input
+                  type="text"
+                  className="keywords-input"
+                  placeholder="Enter keywords or phrases you want in the post..."
+                  value={keywords}
+                  onChange={(e) => setKeywords(e.target.value)}
+                  onKeyPress={(e) => { // הוספת שליחה בלחיצת אנטר
+                    if (e.key === 'Enter') {
+                      handleSubmitKeywords();
+                    }
+                  }}
+                />
+                <button onClick={handleSubmitKeywords} className="generate-button" disabled={isLoading}>
+                  {isLoading ? (
+                    <AiOutlineLoading className="loading-icon" />
+                  ) : (
+                    <img src={sendIcon} alt="Send" />
+                  )}
+                </button>
+              </div>
+
+              <div className="filter-options">
+                <ul>
+                  {/* Content Type Filter */}
+                  <li
+                    onClick={() => {
+                      closeOtherDropdowns("contentType");
+                      setShowContentTypeOptions(!showContentTypeOptions);
+                    }}
+                    className="filter-header"
+                  >
+                    <BsChatLeftText className="icon" /> Content Type:{" "}
+                    <strong>{selectedContentType || "None"}</strong>
+                  </li>
+                  {showContentTypeOptions && (
+                    <ul className="options-list">
+                      {contentTypes.map((type) => (
+                        <li
+                          key={type}
+                          className={`option-item ${selectedContentType === type ? "selected" : ""}`}
+                          onClick={() => {
+                            setSelectedContentType(type);
+                            setShowContentTypeOptions(false);
+                          }}
+                        >
+                          {type}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Writing Style Filter */}
+                  <li
+                    onClick={() => {
+                      closeOtherDropdowns("writingStyle");
+                      setShowWritingStyleOptions(!showWritingStyleOptions);
+                    }}
+                    className="filter-header"
+                  >
+                    <FiEdit className="icon" /> Writing Style:{" "}
+                    <strong>{selectedWritingStyle || "None"}</strong>
+                  </li>
+                  {showWritingStyleOptions && (
+                    <ul className="options-list">
+                      {writingStyles.map((style) => (
+                        <li
+                          key={style}
+                          className={`option-item ${selectedWritingStyle === style ? "selected" : ""}`}
+                          onClick={() => {
+                            setSelectedWritingStyle(style);
+                            setShowWritingStyleOptions(false);
+                          }}
+                        >
+                          {style}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Concept Filter */}
+                  <li
+                    onClick={() => {
+                      closeOtherDropdowns("concept");
+                      setShowConceptOptions(!showConceptOptions);
+                    }}
+                    className="filter-header"
+                  >
+                    <AiOutlineTag className="icon" /> Concept:{" "} {/* שיניתי ל-AiOutlineTag כי זה נראה יותר הגיוני ל"מושג" */}
+                    <strong>{selectedConcept || "None"}</strong>
+                  </li>
+                  {showConceptOptions && (
+                    <ul className="options-list">
+                      {concepts.map((concept) => (
+                        <li
+                          key={concept}
+                          className={`option-item ${selectedConcept === concept ? "selected" : ""}`}
+                          onClick={() => {
+                            setSelectedConcept(concept);
+                            setShowConceptOptions(false);
+                          }}
+                        >
+                          {concept}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Length Filter */}
+                  <li
+                    onClick={() => {
+                      closeOtherDropdowns("length");
+                      setShowLengthOptions(!showLengthOptions);
+                    }}
+                    className="filter-header"
+                  >
+                    <BiText className="icon" /> Length: <strong>{selectedLength || "None"}</strong>
+                  </li>
+                  {showLengthOptions && (
+                    <ul className="options-list">
+                      {lengths.map((len) => (
+                        <li
+                          key={len}
+                          className={`option-item ${selectedLength === len ? "selected" : ""}`}
+                          onClick={() => {
+                            setSelectedLength(len);
+                            setShowLengthOptions(false);
+                          }}
+                        >
+                          {len}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </ul>
+              </div>
+            </div>
+
+            {/* הצגת מילות המפתח שנשלחו כתגים */}
+            {keywordMessages.length > 0 && (
+              <div className="keyword-messages-display">
+                {keywordMessages.map((msg, index) => (
+                  <span key={index} className="keyword-tag">{msg.text}</span>
+                ))}
+              </div>
+            )}
+
+            {generatedPost && (
+              <div className="generated-post-preview">
+                <h3>Generated Post Preview:</h3>
+                <div className="post-content-box">{generatedPost}</div>
+              </div>
+            )}
+
+            <div className="generate-post-container">
+              <button
+                onClick={handleGenerateContent}
+                className="generate-post-button"
+                disabled={isLoading}
+              >
+                {isLoading ? <AiOutlineLoading className="loading-icon" /> : "GENERATE POST"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="section suggested-content-section">
+          <h2>Suggested Content From Instagram</h2>
+          {loadingAISuggestions ? (
+            <div className="loading-suggestions">
+              <AiOutlineLoading className="loading-icon" /> Loading content suggestions...
+            </div>
+          ) : aiSuggestions.length === 0 ? (
+            <p className="no-suggestions-message">No suggestions available.</p>
+          ) : (
+            <ul className="suggested-content-list">
+              {aiSuggestions.map((item) => (
+                // **תיקון: ודא ש-key הוא ייחודי. השתמשתי ב-_id כפי שקיימת במבנה ה-JSON האפשרי.**
+                // כמו כן, הסרתי את 'suggested-${item.type}' מה-className אם item.type לא מוגדר היטב
+                <li key={item._id} className="suggestion-card">
+                  <div className="suggestion-info">
+                    <span className="suggestion-type">
+                      {/* תיקון: ודא ש-contentType מוגדר היטב ב-SuggestedItem */}
+                      {item.contentType === "Story" ? <AiOutlinePlayCircle /> : <BsImageFill />}
+                      {item.contentType}
+                    </span>
+                    <strong>{item.title}</strong>
+                    <p>{item.content}</p>
+
+                    {/* תיקון: ודא ש-imageUrls קיים לפני המיפוי */}
+                    {item.imageUrls && item.imageUrls.length > 0 && (
+                      <div className="suggestion-images">
+                        {item.imageUrls.map((url: string, index: number) => (
+                          <img key={index} src={url} alt={`Suggestion ${index}`} className="suggestion-image" />
+                        ))}
+                      </div>
+                    )}
+
+                    {/* תיקון: ודא ש-hashtags קיים לפני המיפוי */}
+                    {item.hashtags && item.hashtags.length > 0 && (
+                      <div className="tags">
+                        {item.hashtags.map((tag: string) => (
+                          <span className="tag" key={tag}>#{tag}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    className="create-button"
+                    onClick={() => {
+                      // **תיקון: העתק את התוכן והכותרת**
+                      navigator.clipboard.writeText(`${item.title}\n\n${item.content}`);
+                      alert("Copied to clipboard!");
+                    }}
+                  >
+                    Copy
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default CreateContentPage;
