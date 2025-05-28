@@ -1,19 +1,24 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+// src/contexts/AuthContext.tsx
+import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 
-interface AuthContextProps {
+interface AuthContextType {
   isLoggedIn: boolean;
   setIsLoggedIn: (isLoggedIn: boolean) => void;
   user: any;
   token: string | null;
   isAuthLoaded: boolean;
+  login: (userData: any) => void;
+  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextProps>({
+const AuthContext = createContext<AuthContextType>({
   isLoggedIn: false,
   setIsLoggedIn: () => {},
   user: null,
   token: null,
   isAuthLoaded: false,
+  login: () => {},
+  logout: () => {},
 });
 
 const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -33,8 +38,24 @@ const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     setIsAuthLoaded(true);
   }, []);
 
+  const login = (userData: any) => {
+    setUser(userData);
+    setToken(userData.token || null);
+    setIsLoggedIn(true);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    setIsLoggedIn(false);
+    localStorage.removeItem('user');
+  };
+
   return (
-    <AuthContext.Provider value={{ isLoggedIn, setIsLoggedIn, user, token, isAuthLoaded }}>
+    <AuthContext.Provider
+      value={{ isLoggedIn, setIsLoggedIn, user, token, isAuthLoaded, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

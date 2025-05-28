@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import ChatBox from "../../components/ChatBox/ChatBox";
 import { generatePostFromAI } from "../../api/openai";
-import { fetchSuggestions } from "../../api/aiSuggestions";
 import "./CreateContentPage.css";
 import {
   AiOutlinePlayCircle,
@@ -16,58 +15,79 @@ import { BiText } from "react-icons/bi";
 import sendIcon from "../../Images/white-send.png";
 
 const CreateContentPage = () => {
-  const [keywords, setKeywords] = useState("");
-  const [keywordMessages, setKeywordMessages] = useState<{ text: string }[]>([]);
-  const [generatedPost, setGeneratedPost] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [suggestedContent, setSuggestedContent] = useState<SuggestedItem[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(true);
+  const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+
+  const [showContentTypeOptions, setShowContentTypeOptions] = useState(false);
+  const [showWritingStyleOptions, setShowWritingStyleOptions] = useState(false);
+  const [showConceptOptions, setShowConceptOptions] = useState(false);
+  const [showLengthOptions, setShowLengthOptions] = useState(false);
 
   const [selectedContentType, setSelectedContentType] = useState<string | null>(null);
   const [selectedWritingStyle, setSelectedWritingStyle] = useState<string | null>(null);
   const [selectedConcept, setSelectedConcept] = useState<string | null>(null);
   const [selectedLength, setSelectedLength] = useState<string | null>(null);
 
+  const [keywords, setKeywords] = useState<string>("");
+  const [keywordMessages, setKeywordMessages] = useState<KeywordMessage[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const [generatedPost, setGeneratedPost] = useState<string | null>(null);
+
   const contentTypes = ["Post", "Story", "Reel"];
   const writingStyles = ["Professional", "Humorous", "Inspiring", "Casual"];
   const concepts = ["Behind the Scenes", "Tips", "Q&A", "Promotion"];
   const lengths = ["Short", "Medium", "Long"];
 
-  const [aiSuggestions, setAiSuggestions] = useState<any[]>([]);
-  const [loadingAISuggestions, setLoadingAISuggestions] = useState(true);
-  const [isInstagramConnected, setIsInstagramConnected] = useState(false);
-
-  // Simulate Instagram connection
+  // מדמה חיבור אינסטגרם אחרי חצי שניה
   useEffect(() => {
-    setTimeout(() => setIsInstagramConnected(true), 500);
+    setTimeout(() => {
+      setIsInstagramConnected(true);
+    }, 500);
   }, []);
 
-  // Fetch AI Suggestions
+  // העלאת המלצות תוכן לפי חיבור אינסטגרם
   useEffect(() => {
-    if (isInstagramConnected) {
-      const fetchFromApi = async () => {
-        try {
-          const user = JSON.parse(
-            localStorage.getItem("user") || sessionStorage.getItem("user") || "null"
-          );
-          const token = user?.token;
-          if (!token) {
-            console.warn("No token found");
-            return;
-          }
-  
-          const data = await fetchSuggestions(token);
-          setAiSuggestions(data); // זה מה שמשפיע על ההצגה במסך
-        } catch (err) {
-          console.error("Error loading suggestions", err);
-        } finally {
-          setLoadingAISuggestions(false);
+    const fetchSuggestedContent = async () => {
+      setIsLoadingSuggestions(true);
+      try {
+        // כאן יש להכניס את הלוגיקה לקבלת טוקן אמיתי מהאחסון
+        const user = JSON.parse(
+          localStorage.getItem("user") || sessionStorage.getItem("user") || "null"
+        );
+        const token = user?.token;
+        if (!token) {
+          console.warn("No token found");
+          setSuggestedContent([]);
+          return;
         }
-      };
-  
-      setLoadingAISuggestions(true);
-      fetchFromApi();
+
+        const res = await fetch(
+          `http://localhost:3001/api/instagram/suggested-posts?accessToken=${token}`
+        );
+        const data = await res.json();
+
+        if (Array.isArray(data.suggestions)) {
+          setSuggestedContent(data.suggestions);
+        } else {
+          setSuggestedContent([]);
+        }
+      } catch (error) {
+        console.error("Error fetching suggested posts:", error);
+        setSuggestedContent([]);
+      } finally {
+        setIsLoadingSuggestions(false);
+      }
+    };
+
+    if (isInstagramConnected) {
+      fetchSuggestedContent();
+    } else {
+      setSuggestedContent([]);
+      setIsLoadingSuggestions(false);
     }
   }, [isInstagramConnected]);
-  
 
   const handleSubmitKeywords = () => {
     if (keywords.trim()) {
@@ -78,12 +98,17 @@ const CreateContentPage = () => {
 
   const handleGenerateContent = async () => {
     const trimmed = keywords.trim();
+
     if (!trimmed && keywordMessages.length === 0) {
-      alert("Please enter some keywords.");
+      alert("Please enter some keywords."); // הודעת שגיאה מפורטת
       return;
     }
 
-    const allKeywords = [...keywordMessages.map((msg) => msg.text), ...(trimmed ? [trimmed] : [])].join(", ");
+    const allKeywords = [
+      ...keywordMessages.map((msg) => msg.text),
+      ...(trimmed ? [trimmed] : []),
+    ].join(", ");
+
     setIsLoading(true);
 
     try {
@@ -103,7 +128,7 @@ const CreateContentPage = () => {
       setKeywords("");
     } catch (error) {
       console.error("Error generating content:", error);
-      alert("There was an error generating the post.");
+      alert("There was an error generating the post. Please try again."); // הודעת שגיאה מפורטת
     } finally {
       setIsLoading(false);
     }
@@ -118,6 +143,11 @@ const CreateContentPage = () => {
           <p className="subtitle">
             Let our smart AI help you create engaging content for your Instagram.
           </p>
+          {!isInstagramConnected && (
+            <p className="connect-instagram-message">
+              Please connect your Instagram account to see personalized content suggestions.
+            </p>
+          )}
         </div>
 
         <div className="section">
@@ -134,27 +164,10 @@ const CreateContentPage = () => {
 
             <div className="keyword-messages-container">
               {keywordMessages.map((msg, index) => (
-                <div key={index} className="keyword-message">{msg.text}</div>
+                <div key={index} className="keyword-message">
+                  {msg.text}
+                </div>
               ))}
-            </div>
-
-            <div className="keywords-input-area">
-              <input
-                type="text"
-                className="keywords-input"
-                placeholder="Enter keywords..."
-                value={keywords}
-                onChange={(e) => setKeywords(e.target.value)}
-              />
-              <button onClick={handleSubmitKeywords} className="generate-button" disabled={isLoading}>
-                {isLoading ? <AiOutlineLoading className="loading-icon" /> : <img src={sendIcon} alt="Send" />}
-              </button>
-            </div>
-
-            <div className="generate-post-container">
-              <button onClick={handleGenerateContent} className="generate-post-button" disabled={isLoading}>
-                {isLoading ? <AiOutlineLoading className="loading-icon" /> : "GENERATE POST"}
-              </button>
             </div>
 
             {generatedPost && (
@@ -163,6 +176,33 @@ const CreateContentPage = () => {
                 <div className="post-content-box">{generatedPost}</div>
               </div>
             )}
+
+            <div className="keywords-input-area">
+              <input
+                type="text"
+                className="keywords-input"
+                placeholder="Enter keywords or phrases you want in the post..."
+                value={keywords}
+                onChange={(e) => setKeywords(e.target.value)}
+              />
+              <button onClick={handleSubmitKeywords} className="generate-button" disabled={isLoading}>
+                {isLoading ? (
+                  <AiOutlineLoading className="loading-icon" />
+                ) : (
+                  <img src={sendIcon} alt="Send" />
+                )}
+              </button>
+            </div>
+
+            <div className="generate-post-container">
+              <button
+                onClick={handleGenerateContent}
+                className="generate-post-button"
+                disabled={isLoading}
+              >
+                {isLoading ? <AiOutlineLoading className="loading-icon" /> : "GENERATE POST"}
+              </button>
+            </div>
           </div>
 
           <div className="filter-options">
@@ -185,50 +225,52 @@ const CreateContentPage = () => {
 
         <div className="suggested-content">
           <h2>Suggested Content</h2>
-          {loadingAISuggestions ? (
+          {!isInstagramConnected ? (
+            <p className="no-suggestions-message">
+              Connect your Instagram account to view personalized content suggestions here.
+            </p>
+          ) : isLoadingSuggestions ? (
             <div className="loading-suggestions">
               <AiOutlineLoading className="loading-icon" /> Loading content suggestions...
             </div>
-          ) : aiSuggestions.length === 0 ? (
+          ) : suggestedContent.length === 0 ? (
             <p className="no-suggestions-message">No suggestions found.</p>
           ) : (
             <ul>
-              {aiSuggestions.map((item) => (
-                <li key={item._id}>
+              {suggestedContent.map((item) => (
+                <li key={item.id}>
                   <div className="suggestion-info">
                     <span className="suggestion-type">
-                      {item.contentType === "Story" ? <AiOutlinePlayCircle /> : <BsImageFill />}
-                      {item.contentType}
+                      {item.type === "post" ? <BsImageFill /> : <AiOutlinePlayCircle />}
+                      {item.type === "post" ? "Post" : "Story"}
                     </span>
                     <strong>{item.title}</strong>
-                    <p>{item.content}</p>
-
-                    {item.imageUrls && (
-                      <div className="suggestion-images">
-                        {item.imageUrls.map((url: string, index: number) => (
-                          <img key={index} src={url} alt={`Suggestion ${index}`} style={{ width: "100px", borderRadius: "8px", marginRight: "10px" }} />
-                        ))}
-                      </div>
+                    {item.engagementScore && (
+                      <span className="engagement">❤️ {item.engagementScore}%</span>
                     )}
-
-                    {item.hashtags && item.hashtags.length > 0 && (
+                    {(item.tags?.length || item.hashtags?.length) > 0 && (
                       <div className="tags">
-                        {item.hashtags.map((tag: string) => (
+                        {(item.tags || item.hashtags).map((tag: string) => (
                           <span className="tag" key={tag}>#{tag}</span>
                         ))}
                       </div>
                     )}
                   </div>
-
-                  <button
-                    className="create-button"
-                    onClick={() => {
-                      navigator.clipboard.writeText(`${item.title}\n\n${item.content}`);
-                      alert("Copied to clipboard!");
-                    }}
-                  >
-                    Copy
-                  </button>
+                  {item.action ? (
+                    <button className="create-button" onClick={item.action}>
+                      Create
+                    </button>
+                  ) : (
+                    <button
+                      className="create-button"
+                      onClick={() => {
+                        navigator.clipboard.writeText(`${item.title}\n\n${item.content || ""}`);
+                        alert("Copied to clipboard!");
+                      }}
+                    >
+                      Copy
+                    </button>
+                  )}
                 </li>
               ))}
             </ul>

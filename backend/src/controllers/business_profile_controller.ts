@@ -2,29 +2,30 @@ import { Request, Response } from "express";
 import BusinessProfile from "../models/business_profile_model";
 
 const getProfile = async (req: Request, res: Response): Promise<void> => {
-    try {
-      const userId = req.params.userId;
-      const profile = await BusinessProfile.findOne({ userId });
-  
-      if (!profile) {
-        res.status(404).json({ message: "Business profile not found" });
-        return;
-      }
-  
-      res.status(200).json(profile);
-    } catch (err) {
-      res.status(500).json({ message: "Server error" });
+  try {
+    const userId = (req as any).user.id;
+
+    const profile = await BusinessProfile.findOne({ userId });
+
+    if (!profile) {
+      res.status(404).json({ message: "Business profile not found" });
+      return;
     }
-  };
-  
+
+    res.status(200).json(profile);
+  } catch (err) {
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 const updateProfile = async (req: Request, res: Response) => {
   try {
-    const userId = req.params.userId;
+    const userId = (req as any).user.id;
     const update = req.body;
 
     const profile = await BusinessProfile.findOneAndUpdate(
       { userId },
-      update,
+      { ...update, userId },
       { new: true, upsert: true, runValidators: true }
     );
 
