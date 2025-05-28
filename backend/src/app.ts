@@ -9,6 +9,7 @@ import chatRoutes from "./routes/chat_routes";
 import analyticsRoutes from './routes/analytics_routes';
 import instagramRoutes from "./routes/instagram_routes";
 import businessProfileRoutes from "./routes/business_profile_routes";
+import contentSuggestionRoutes from "./routes/content_suggestion_routes";
 import bodyParser from "body-parser";
 import setupSwagger from "./swagger";
 import cors from "cors";
@@ -32,6 +33,8 @@ app.use("/business-profile", businessProfileRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/instagram", instagramRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
+app.use("/ai", contentSuggestionRoutes);
+
 
 
 setupSwagger(app);

@@ -1,101 +1,85 @@
 import React, { useContext } from "react";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { pages } from "./router";
-import { AuthProvider, AuthContext, useAuth } from "./contexts/AuthContext";
+import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar/Sidebar";
-import LoginPage from "./views/LoginPage/LoginPage"; // רק LoginPage, שכולל את RegisterForm
+import LoginPage from "./views/LoginPage/LoginPage"; // כולל גם RegisterForm
 import BusinessProfileForm from "./components/BusinessProfileForm/BusinessProfileForm";
 import HomePage from "./views/HomePage/HomePage";
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-}
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isLoggedIn, isAuthLoaded } = useContext(AuthContext);
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const { isLoggedIn } = useAuth();
-  console.log("ProtectedRoute: isLoggedIn =", isLoggedIn, "for path:", window.location.pathname);
-  if (!isLoggedIn) {
-    console.log("ProtectedRoute: Not logged in, navigating to /");
-    return <Navigate to="/" replace />;
+  if (!isAuthLoaded) {
+    return <div>Loading...</div>;
   }
+
+  if (!isLoggedIn) {
+    console.log("ProtectedRoute: Not logged in, navigating to /login");
+    return <Navigate to="/login" replace />;
+  }
+
   return <>{children}</>;
 };
 
 const AppContent: React.FC = () => {
-  const { isLoggedIn } = useAuth();
-  console.log("AppContent: isLoggedIn =", isLoggedIn);
+  const { isLoggedIn } = useContext(AuthContext);
+  const location = useLocation();
+  const hiddenSidebarRoutes = ["/login", "/register"];
+  const isSidebarHidden = hiddenSidebarRoutes.includes(location.pathname);
 
   return (
-    <BrowserRouter>
-      <div className="app-container">
-        {isLoggedIn && <Sidebar />}
+    <div className="app-container">
+      {!isSidebarHidden && isLoggedIn && <Sidebar />}
 
-        <div className="main-content">
-          <Routes>
-            {/* הנתיב הראשי ("/") - השער היחיד לאימות.
-                אם המשתמש מחובר, הפנו אותו ל-/business-profile.
-                אחרת, הציגו את ה-LoginPage (שמכיל את טופס ההרשמה וההתחברות).
-            */}
-            <Route
-              path="/"
-              element={
-                isLoggedIn ? (
-                  console.log("AppContent: User is logged in, redirecting to /business-profile"),
-                  <Navigate to="/business-profile" replace />
-                ) : (
-                  console.log("AppContent: User is NOT logged in, showing LoginPage"),
-                  <LoginPage />
-                )
-              }
-            />
-
-            {/* טופס הפרופיל העסקי - חייב להיות מוגן */}
-            <Route
-              path="/business-profile"
-              element={
-                <ProtectedRoute>
-                  <BusinessProfileForm />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* דף הבית - חייב להיות מוגן */}
-            <Route
-              path="/home"
-              element={
-                <ProtectedRoute>
-                  <HomePage />
-                </ProtectedRoute>
-              }
-            />
-
-            {/* שאר הדפים מ־pages - ודאו שהם גם מוגנים ואין נתיבים כפולים */}
-            {pages
-              .filter((page) => page.path !== "/" && page.path !== "/home" && page.path !== "/business-profile")
-              .map((page) => (
-                <Route
-                  key={page.path}
-                  path={page.path}
-                  element={
-                    <ProtectedRoute>
-                      {page.element}
-                    </ProtectedRoute>
-                  }
-                />
-              ))}
-          </Routes>
-        </div>
+      <div className="main-content">
+        <Routes>
+          <Route
+            path="/"
+            element={
+              isLoggedIn
+                ? <Navigate to="/business-profile" replace />
+                : <LoginPage />
+            }
+          />
+          <Route path="/login" element={<LoginPage />} />
+          <Route
+            path="/business-profile"
+            element={
+              <ProtectedRoute>
+                <BusinessProfileForm />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/home"
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          {pages
+            .filter(p => !["/", "/home", "/business-profile"].includes(p.path))
+            .map(page => (
+              <Route
+                key={page.path}
+                path={page.path}
+                element={<ProtectedRoute>{page.element}</ProtectedRoute>}
+              />
+            ))}
+        </Routes>
       </div>
-    </BrowserRouter>
+    </div>
   );
 };
 
-const App: React.FC = () => {
-  return (
-    <AuthProvider>
+const App: React.FC = () => (
+  <AuthProvider>
+    <BrowserRouter>
       <AppContent />
-    </AuthProvider>
-  );
-};
+    </BrowserRouter>
+  </AuthProvider>
+);
 
 export default App;
