@@ -4,6 +4,9 @@ import { RegisterResponse } from "./types/Responses/RegisterResponse";
 import { User } from "./types/User";
 import axios, { AxiosResponse } from "axios";
 
+// Define the base URL for API requests
+const BASE_URL = "http://localhost:5000"; // Replace with your actual backend URL
+
 const getData = async <T>(
     request: Promise<AxiosResponse<T, unknown>>
 ): Promise<AxiosResponse<T, unknown> | null> => {
@@ -18,6 +21,16 @@ const getData = async <T>(
         return null;
     }
 };
+
+export const fetchInstagramPosts = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/instagram/posts`);
+      return response.data.posts; // הפוסטים שחזרו מהשרת
+    } catch (error) {
+      console.error("Failed to fetch Instagram posts:", error);
+      throw error;
+    }
+  };
 
 export default {
     login(email: string, password: string): Promise<AxiosResponse<LoginResponse, unknown> | null> {

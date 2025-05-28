@@ -46,54 +46,52 @@ const CreateContentPage = () => {
     const [keywordMessages, setKeywordMessages] = useState<KeywordMessage[]>([]);
     const [isLoading, setIsLoading] = useState<boolean>(false);
 
-    const [generatedPost, setGeneratedPost] = useState<string | null>(null); // 🆕 שמירת הפוסט שנוצר
+    const [generatedPost, setGeneratedPost] = useState<string | null>(null);
 
     const contentTypes = ["Post", "Story", "Reel"];
     const writingStyles = ["Professional", "Humorous", "Inspiring", "Casual"];
     const concepts = ["Behind the Scenes", "Tips", "Q&A", "Promotion"];
     const lengths = ["Short", "Medium", "Long"];
 
+    // רק לדמו: מחברים אינסטגרם אחרי חצי שניה
     useEffect(() => {
         setTimeout(() => {
             setIsInstagramConnected(true);
         }, 500);
     }, []);
 
+    // שימוש בשרת אמיתי להעלאת המלצות תוכן לפי אינסטגרם מחובר
     useEffect(() => {
-        if (isInstagramConnected) {
+        const fetchSuggestedContent = async () => {
             setIsLoadingSuggestions(true);
-            setTimeout(() => {
-                setSuggestedContent([
-                    {
-                        id: "1",
-                        type: "post",
-                        title: "Tips for Effective Instagram Marketing",
-                        engagementScore: 85,
-                        tags: ["tips", "marketing", "instagram"],
-                        action: () => console.log("Create Post 1"),
-                    },
-                    {
-                        id: "2",
-                        type: "story",
-                        title: "Q&A Session with Your Followers",
-                        engagementScore: 78,
-                        tags: ["story", "questions", "engagement"],
-                        action: () => console.log("Create Story 2"),
-                    },
-                    {
-                        id: "3",
-                        type: "post",
-                        title: "Behind the Scenes of Your Business",
-                        engagementScore: 92,
-                        tags: ["post", "authenticity", "business"],
-                        action: () => console.log("Create Post 3"),
-                    },
-                ]);
+            try {
+                // TODO: החליף את המשתנים האלה עם ערכים אמיתיים מהרשאה/סטור
+                const accessToken = "INSTAGRAM_ACCESS_TOKEN_HERE";
+                const userId = "INSTAGRAM_USER_ID_HERE";
+
+                const res = await fetch(
+                    `http://localhost:3001/api/instagram/suggested-posts?accessToken=${accessToken}&userId=${userId}`
+                );
+                const data = await res.json();
+
+                if (Array.isArray(data.suggestions)) {
+                    setSuggestedContent(data.suggestions);
+                } else {
+                    setSuggestedContent([]);
+                }
+            } catch (error) {
+                console.error("Error fetching suggested posts:", error);
+                setSuggestedContent([]);
+            } finally {
                 setIsLoadingSuggestions(false);
-            }, 1500);
+            }
+        };
+
+        if (isInstagramConnected) {
+            fetchSuggestedContent();
         } else {
-            setIsLoadingSuggestions(false);
             setSuggestedContent([]);
+            setIsLoadingSuggestions(false);
         }
     }, [isInstagramConnected]);
 
@@ -105,46 +103,42 @@ const CreateContentPage = () => {
     };
 
     const handleGenerateContent = async () => {
-    const trimmed = keywords.trim();
+        const trimmed = keywords.trim();
 
-    // בדיקה אם יש מילים אחרונות בשדה או הודעות שהוזנו בעבר
-    if (!trimmed && keywordMessages.length === 0) {
-        alert("Please enter some keywords.");
-        return;
-    }
-
-    // איחוד כל מילות המפתח מהשדה הנוכחי ומההיסטוריה
-    const allKeywords = [
-        ...keywordMessages.map((msg) => msg.text),
-        ...(trimmed ? [trimmed] : [])
-    ].join(", ");
-
-    setIsLoading(true);
-
-    try {
-        if (trimmed) {
-            setKeywordMessages((prev) => [...prev, { text: trimmed }]);
+        if (!trimmed && keywordMessages.length === 0) {
+            alert("Please enter some keywords.");
+            return;
         }
 
-        const post = await generatePostFromAI({
-            keywords: allKeywords,
-            contentType: selectedContentType ?? "",
-            writingStyle: selectedWritingStyle ?? "",
-            concept: selectedConcept ?? "",
-            length: selectedLength ?? "",
-        });
+        const allKeywords = [
+            ...keywordMessages.map((msg) => msg.text),
+            ...(trimmed ? [trimmed] : []),
+        ].join(", ");
 
-        setGeneratedPost(post);
-        setKeywords(""); // נקה את השדה לאחר שליחה
-    } catch (error) {
-        console.error("Error generating content:", error);
-        alert("There was an error generating the post. Please try again.");
-    } finally {
-        setIsLoading(false);
-    }
-};
+        setIsLoading(true);
 
-  
+        try {
+            if (trimmed) {
+                setKeywordMessages((prev) => [...prev, { text: trimmed }]);
+            }
+
+            const post = await generatePostFromAI({
+                keywords: allKeywords,
+                contentType: selectedContentType ?? "",
+                writingStyle: selectedWritingStyle ?? "",
+                concept: selectedConcept ?? "",
+                length: selectedLength ?? "",
+            });
+
+            setGeneratedPost(post);
+            setKeywords("");
+        } catch (error) {
+            console.error("Error generating content:", error);
+            alert("There was an error generating the post. Please try again.");
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div className="container">
@@ -157,7 +151,8 @@ const CreateContentPage = () => {
                     </p>
                     {!isInstagramConnected && (
                         <p className="connect-instagram-message">
-                            Please connect your Instagram account to see personalized content suggestions.
+                            Please connect your Instagram account to see personalized content
+                            suggestions.
                         </p>
                     )}
                 </div>
@@ -171,7 +166,8 @@ const CreateContentPage = () => {
                     <div className="ai-generated-content">
                         <h2>Let AI Write for You!</h2>
                         <div className="details">
-                        Share your content preferences and key points — get tailored, ready-to-use content instantly.
+                            Share your content preferences and key points — get tailored,
+                            ready-to-use content instantly.
                         </div>
                         <div className="keyword-messages-container">
                             {keywordMessages.map((msg, index) => (
@@ -215,13 +211,10 @@ const CreateContentPage = () => {
                             </button>
                         </div>
 
-                        {/* ✅ תצוגה מקדימה של הפוסט שנוצר */}
                         {generatedPost && (
                             <div className="generated-post-preview">
                                 <h3>Generated Post Preview:</h3>
-                                <div className="post-content-box">
-                                    {generatedPost}
-                                </div>
+                                <div className="post-content-box">{generatedPost}</div>
                             </div>
                         )}
                     </div>
@@ -307,11 +300,13 @@ const CreateContentPage = () => {
                     <h2>Suggested Content</h2>
                     {!isInstagramConnected ? (
                         <p className="no-suggestions-message">
-                            Connect your Instagram account to view personalized content suggestions here.
+                            Connect your Instagram account to view personalized content suggestions
+                            here.
                         </p>
                     ) : isLoadingSuggestions ? (
                         <div className="loading-suggestions">
-                            <AiOutlineLoading className="loading-icon" /> Loading content suggestions...
+                            <AiOutlineLoading className="loading-icon" /> Loading content
+                            suggestions...
                         </div>
                     ) : (
                         <ul>

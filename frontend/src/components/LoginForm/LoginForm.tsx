@@ -1,19 +1,19 @@
-import React, { useContext, useState } from 'react'
-import { AuthContext } from '../../contexts/AuthContext';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
 import Swal from 'sweetalert2';
 import { StatusCodes } from 'http-status-codes';
+import { useAuth } from '../../contexts/AuthContext'; // ייבאו את useAuth (במקום useContext)
 import './LoginForm.css';
 import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
-
 
 interface LoginFormProps {
     toggleForm: () => void;
 }
 
 const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
-    const { setIsLoggedIn } = useContext(AuthContext);
+    // השתמשו ב-useAuth כדי לקבל את פונקציית login
+    const { login } = useAuth(); // שינוי מ-setIsLoggedIn = useContext(AuthContext)
     const navigate = useNavigate();
     const [email, setEmail] = useState<string>('');
     const [password, setPassword] = useState<string>('');
@@ -27,14 +27,22 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
             if (response) {
                 if (response.status === StatusCodes.OK) {
                     localStorage.setItem('user', JSON.stringify(response.data));
-                    setIsLoggedIn(true);
-                    navigate('/homePage');
+                    // *** צעד קריטי: סמנו את המשתמש כמחובר בקונטקסט ***
+                    login(); // שינוי מ-setIsLoggedIn(true);
+                    console.log("LoginForm: Login successful, navigating to /business-profile"); // שיניתי את הנתיב ל-business-profile
+                    navigate('/business-profile'); // שינוי מ-navigate('/homePage');
                 } else if (response.status === StatusCodes.BAD_REQUEST) {
-                    Swal.fire('Error', 'Invalid credentials', 'error');
+                    Swal.fire('Error', 'פרטי התחברות שגויים!', 'error');
+                } else {
+                    // טיפול בשגיאות אחרות
+                    Swal.fire('Error', 'שגיאה בהתחברות. אנא נסה שוב.', 'error');
                 }
+            } else {
+                Swal.fire('Error', 'לא התקבלה תגובה מהשרת. אנא נסה שוב.', 'error');
             }
         } catch (error) {
-            Swal.fire('Error', 'An error occurred during login.', 'error');
+            console.error("Login API Error:", error);
+            Swal.fire('Error', 'אירעה שגיאה במהלך ההתחברות.', 'error');
         }
     };
 
@@ -45,13 +53,16 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
 
                 if (response && response.status === StatusCodes.OK) {
                     localStorage.setItem('user', JSON.stringify(response.data));
-                    setIsLoggedIn(true);
-                    navigate('/homePage');
+                    // *** צעד קריטי: סמנו את המשתמש כמחובר בקונטקסט ***
+                    login(); // שינוי מ-setIsLoggedIn(true);
+                    console.log("LoginForm: Google Login successful, navigating to /business-profile"); // שיניתי את הנתיב
+                    navigate('/business-profile'); // שינוי מ-navigate('/homePage');
                 } else {
-                    Swal.fire('Error', 'An error occurred during Google login.', 'error');
+                    Swal.fire('Error', 'אירעה שגיאה במהלך התחברות Google.', 'error');
                 }
             } catch (error) {
-                Swal.fire('Error', 'An error occurred during Google login.', 'error');
+                console.error("Google Login API Error:", error);
+                Swal.fire('Error', 'אירעה שגיאה במהלך התחברות Google.', 'error');
             }
         }
     };
@@ -86,9 +97,9 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
                     <button type="submit" className="btn btn-login w-100 mb-2 rounded-pill">Login</button>
                     <button type="button" className="btn btn-register w-100 rounded-pill" onClick={toggleForm}>Register</button>
                     <div className="google-login-wrapper">
-                        <GoogleLogin 
+                        <GoogleLogin
                             onSuccess={handleGoogleLoginSuccess}
-                            onError={() => Swal.fire('Error', 'An error occurred during Google login.', 'error')}
+                            onError={() => Swal.fire('Error', 'אירעה שגיאה במהלך התחברות Google.', 'error')}
                             shape='pill'
                         />
                     </div>
