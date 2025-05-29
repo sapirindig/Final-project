@@ -5,6 +5,7 @@ import Sidebar from "./components/Sidebar/Sidebar";
 import LoginPage from "./views/LoginPage/LoginPage";
 import HomePage from "./views/HomePage/HomePage";
 import { useContext } from "react";
+import BusinessProfileForm from "./components/BusinessProfileForm/BusinessProfileForm";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isLoggedIn, isAuthLoaded } = useContext(AuthContext);
@@ -20,7 +21,7 @@ const AppContent = () => {
   const { isLoggedIn } = useContext(AuthContext);
   const location = useLocation();
 
-  const hiddenSidebarRoutes = ["/login", "/register"];
+  const hiddenSidebarRoutes = ["/login", "/register", "/BusinessProfileForm"];
   const isSidebarHidden = hiddenSidebarRoutes.includes(location.pathname);
 
   return (
@@ -30,6 +31,14 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
+           <Route
+            path="/business-profile"
+            element={
+              <ProtectedRoute>
+                <BusinessProfileForm />
+              </ProtectedRoute>
+            }
+          />
            <Route 
             path="/home" 
             element={
