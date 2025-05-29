@@ -36,8 +36,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ toggleForm }) => {
               token: response.data?.token ?? null, // תתאים לפי מה שאתה מקבל מהשרת
             });
 
-            // נווט לדף הבית
-            navigate('/home');
+            navigate("/business-profile", { replace: true });
           });
         } else if (response.status === StatusCodes.CONFLICT) {
           Swal.fire('Error', 'User already exists!', 'error');

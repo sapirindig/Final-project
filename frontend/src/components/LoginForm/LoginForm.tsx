@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react'
+import React, { useContext, useState } from 'react';
 import { AuthContext } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../../api/api';
@@ -6,7 +6,6 @@ import Swal from 'sweetalert2';
 import { StatusCodes } from 'http-status-codes';
 import './LoginForm.css';
 import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
-
 
 interface LoginFormProps {
     toggleForm: () => void;
@@ -28,7 +27,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
                 if (response.status === StatusCodes.OK) {
                     localStorage.setItem('user', JSON.stringify(response.data));
                     setIsLoggedIn(true);
-                    navigate('/homePage');
+                    navigate('/business-profile'); // ⬅️ ניווט לדף הביזנס
                 } else if (response.status === StatusCodes.BAD_REQUEST) {
                     Swal.fire('Error', 'Invalid credentials', 'error');
                 }
@@ -46,7 +45,7 @@ const LoginForm: React.FC<LoginFormProps> = ({ toggleForm }) => {
                 if (response && response.status === StatusCodes.OK) {
                     localStorage.setItem('user', JSON.stringify(response.data));
                     setIsLoggedIn(true);
-                    navigate('/homePage');
+                    navigate('/business-profile'); // ⬅️ גם כאן שינוי הניווט
                 } else {
                     Swal.fire('Error', 'An error occurred during Google login.', 'error');
                 }
