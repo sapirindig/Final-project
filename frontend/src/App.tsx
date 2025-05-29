@@ -3,6 +3,7 @@ import { pages } from "./router";
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar/Sidebar";
 import LoginPage from "./views/LoginPage/LoginPage";
+import HomePage from "./views/HomePage/HomePage";
 import { useContext } from "react";
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -29,6 +30,14 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
+           <Route 
+            path="/home" 
+            element={
+              <ProtectedRoute>
+                <HomePage />
+              </ProtectedRoute>
+            } 
+          />
           {pages.map((page) => (
             <Route
               key={page.path}
