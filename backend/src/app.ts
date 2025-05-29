@@ -59,4 +59,3 @@ mongoose.connect(process.env.DB_URL_ENV)
   });
 
 export { app };
-

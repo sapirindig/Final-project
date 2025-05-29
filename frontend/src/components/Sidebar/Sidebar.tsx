@@ -6,28 +6,12 @@ import profileIcon from "../../Images/user.png";
 import supportIcon from "../../Images/support.png";
 import logo from "../../Images/Logo.png";
 import createContentIcon from "../../Images/create-content.png";
-// import instagramIcon from "../../Images/Instagram_icon.png (1).webp"; // אין צורך יותר לייבא אייקון אינסטגרם כאן
-import { useContext } from "react";
 import { AuthContext } from "../../contexts/AuthContext";
+import React, { useContext } from "react";
 
 type SidebarProps = {
-    className?: string;
-};
-
-const Sidebar = ({ className = "" }: SidebarProps) => {
-import React, { useContext } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { AuthContext } from "../../contexts/AuthContext";
-import logo from "../../Images/Logo.png";
-import createContentIcon from "../../Images/createContentIcon.png";
-import homeIcon from "../../Images/homeIcon.png";
-import profileIcon from "../../Images/profileIcon.png";
-import supportIcon from "../../Images/supportIcon.png";
-import "./Sidebar.css";
-
-interface SidebarProps {
   className?: string;
-}
+};
 
 const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
   const navigate = useNavigate();
@@ -94,4 +78,3 @@ const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
 };
 
 export default Sidebar;
-
