@@ -3,6 +3,9 @@ import { UserPage } from "../views/UserPage/UserPage";
 import { UserPosts } from "../views/UserPosts/UserPosts";
 import HomePage from "../views/HomePage/HomePage";
 import CreateContentPage from "../views/CreateContentPage/CreateContentPage";
+import AboutUsPage from "../views/AboutUsPage/AboutUsPage"; 
+import SupportPage from "../views/SupportPage/SupportPage";
+
 
 interface Page {
   path: string;
@@ -31,6 +34,17 @@ const pages: Page[] = [
     element: <UserPosts />,
     name: "My Posts",
   },
+  {
+    path: "/about",
+    element: <AboutUsPage />,
+    name: "About Us",
+  },
+  {
+    path: "/support",
+    element: <SupportPage />,
+    name: "Support",
+  }  
+  
 ];
 
 export { pages };

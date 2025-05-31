@@ -33,7 +33,7 @@ const RegisterForm: React.FC<RegisterFormProps> = ({ toggleForm }) => {
             login({
               username,
               email,
-              token: response.data?.token ?? null, // תתאים לפי מה שאתה מקבל מהשרת
+              token: response.data?.token ?? null, // Ensure the token property exists in RegisterResponse
             });
 
             navigate("/business-profile", { replace: true });

@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { pages } from "./router";
+import { pages } from "./router"; 
 import { AuthProvider, AuthContext } from "./contexts/AuthContext";
 import Sidebar from "./components/Sidebar/Sidebar";
 import LoginPage from "./views/LoginPage/LoginPage";
@@ -31,7 +31,7 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
-           <Route
+          <Route
             path="/business-profile"
             element={
               <ProtectedRoute>
@@ -39,13 +39,13 @@ const AppContent = () => {
               </ProtectedRoute>
             }
           />
-           <Route 
-            path="/home" 
+          <Route
+            path="/home"
             element={
               <ProtectedRoute>
                 <HomePage />
               </ProtectedRoute>
-            } 
+            }
           />
           {pages.map((page) => (
             <Route
