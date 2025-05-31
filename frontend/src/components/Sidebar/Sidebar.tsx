@@ -6,6 +6,7 @@ import profileIcon from "../../Images/user.png";
 import supportIcon from "../../Images/support.png";
 import logo from "../../Images/Logo.png";
 import createContentIcon from "../../Images/create-content.png";
+import aboutIcon from "../../Images/info-sign.png"; 
 import { AuthContext } from "../../contexts/AuthContext";
 import React, { useContext } from "react";
 
@@ -40,9 +41,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
         </div>
 
         <div
-          className={`menu-item ${
-            location.pathname === "/homepage" ? "active" : ""
-          }`}
+          className={`menu-item ${location.pathname === "/homepage" ? "active" : ""}`}
           onClick={() => navigate("/homepage")}
         >
           <img src={homeIcon} alt="Home" />
@@ -50,9 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
         </div>
 
         <div
-          className={`menu-item ${
-            location.pathname === "/user" ? "active" : ""
-          }`}
+          className={`menu-item ${location.pathname === "/user" ? "active" : ""}`}
           onClick={() => navigate("/user")}
         >
           <img src={profileIcon} alt="Profile" />
@@ -60,13 +57,19 @@ const Sidebar: React.FC<SidebarProps> = ({ className = "" }) => {
         </div>
 
         <div
-          className={`menu-item ${
-            location.pathname === "/support" ? "active" : ""
-          }`}
+          className={`menu-item ${location.pathname === "/support" ? "active" : ""}`}
           onClick={() => navigate("/support")}
         >
           <img src={supportIcon} alt="Support" />
           <span>Support</span>
+        </div>
+
+        <div
+          className={`menu-item ${location.pathname === "/about" ? "active" : ""}`}
+          onClick={() => navigate("/about")}
+        >
+          <img src={aboutIcon} alt="About Us" />
+          <span>About Us</span>
         </div>
       </div>
 
