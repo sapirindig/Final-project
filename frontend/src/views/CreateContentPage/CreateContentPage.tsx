@@ -14,6 +14,7 @@ import { BsChatLeftText, BsImageFill } from "react-icons/bs";
 import { FiEdit } from "react-icons/fi";
 import { BiText } from "react-icons/bi";
 import sendIcon from "../../Images/white-send.png";
+import Spinner from "../../components/Spinner/Spinner"
 
 // Define the KeywordMessage type
 type KeywordMessage = {
@@ -170,6 +171,9 @@ const CreateContentPage = () => {
 
   return (
     <div className="container">
+       {/* אם בטעינה, תציגי את ה־Spinner מעל כל המסך */}
++     {isLoading && <Spinner />}
+
       <Sidebar className="sidebar" />
       <div className="main-content">
         <div className="header-container">
