@@ -3,6 +3,7 @@ import axios from "axios";
 import sendIcon from "../../Images/white-send.png";
 import attachIcon from "../../Images/paperclip-vertical.png";
 import "./ChatBox.css";
+import Spinner from "../Spinner/Spinner";
 
 type ChatMessage = {
   sender: "user" | "ai";
@@ -18,6 +19,7 @@ const ChatBox = () => {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const hasUserStartedTyping = useRef(false);
+    const [isSendingMessage, setIsSendingMessage] = useState<boolean>(false); 
 
   const initialMessage: ChatMessage = {
     sender: "ai",
@@ -35,7 +37,7 @@ const ChatBox = () => {
 
   const handleSendMessage = async () => {
     if (!message.trim() && !imageFile) return;
-
+ setIsSendingMessage(true);
     const userMsg: ChatMessage = {
       sender: "user",
       text: message,
@@ -73,6 +75,8 @@ const ChatBox = () => {
       setMessages((prev) => [...prev, aiReply]);
     } catch (error) {
       console.error("Error sending message:", error);
+    } finally {
+     setIsSendingMessage(false); 
     }
   };
 
@@ -106,6 +110,7 @@ const ChatBox = () => {
 
   return (
     <div className="chat-box-container">
+      {isSendingMessage && <Spinner />}
       <div className="message-container" ref={chatContainerRef}>
         {messages.map((msg, idx) => (
           <div key={idx} className={`message ${msg.sender === "user" ? "outgoing" : "incoming"}`}>
