@@ -132,3 +132,46 @@ export const postToInstagram = async (req: Request, res: Response): Promise<void
   }
 };
 
+
+export const getPopularInstagramPosts = async (req: Request, res: Response): Promise<void> => {
+  if (!IG_ACCESS_TOKEN || !IG_USER_ID) {
+    res.status(500).json({ message: "Instagram credentials not configured" });
+    return;
+  }
+
+  const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+
+  try {
+    const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/media?fields=id,caption,media_type,media_url,timestamp,like_count,comments_count&access_token=${IG_ACCESS_TOKEN}`;
+
+    const response = await axios.get<{ data: Array<any> }>(url);
+    const allPosts = response.data.data;
+
+    const now = Date.now();
+    const cutoff = now - THIRTY_DAYS_MS;
+
+    const filteredPosts = allPosts
+      .filter(p =>
+        p.media_type === "IMAGE" &&
+        p.timestamp &&
+        new Date(p.timestamp).getTime() >= cutoff
+      )
+      .map(post => ({
+        id: post.id,
+        caption: post.caption || "",
+        media_url: post.media_url,
+        timestamp: post.timestamp,
+        like_count: post.like_count || 0,
+        comments_count: post.comments_count || 0,
+        engagement: (post.like_count || 0) + (post.comments_count || 0),
+      }))
+      .sort((a, b) => b.engagement - a.engagement);
+
+    const topTwo = filteredPosts.slice(0, 2);
+    res.status(200).json({ posts: topTwo });
+
+  } catch (error: any) {
+    console.error("Error fetching optimized Instagram posts:", error.response?.data || error.message);
+    res.status(500).json({ message: "Failed to fetch posts", error: error.message });
+  }
+};
