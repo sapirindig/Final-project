@@ -6,6 +6,8 @@ import LoginPage from "./views/LoginPage/LoginPage";
 import HomePage from "./views/HomePage/HomePage";
 import { useContext } from "react";
 import BusinessProfileForm from "./components/BusinessProfileForm/BusinessProfileForm";
+import Footer from "./components/Footer/Footer";
+
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { isLoggedIn, isAuthLoaded } = useContext(AuthContext);
@@ -56,6 +58,8 @@ const AppContent = () => {
           ))}
         </Routes>
       </div>
+          <Footer />
+
     </div>
   );
 };
