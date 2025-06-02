@@ -2,40 +2,37 @@ import { useState, useEffect } from "react";
 import Sidebar from "../../components/Sidebar/Sidebar";
 import ChatBox from "../../components/ChatBox/ChatBox";
 import { generatePostFromAI } from "../../api/openai";
-// ודא שהנתיב ל-fetchSuggestions נכון, הוספתי אותו כעת
 import { fetchSuggestions } from "../../api/aiSuggestions";
 import "./CreateContentPage.css";
 import {
   AiOutlinePlayCircle,
   AiOutlineTag,
-  AiOutlineLoading, // AiOutlineArrowRight הוסר כי לא בשימוש
+  AiOutlineLoading,
 } from "react-icons/ai";
 import { BsChatLeftText, BsImageFill } from "react-icons/bs";
 import { FiEdit } from "react-icons/fi";
 import { BiText } from "react-icons/bi";
 import sendIcon from "../../Images/white-send.png";
-import Spinner from "../../components/Spinner/Spinner"
+import Spinner from "../../components/Spinner/Spinner";
 
 // Define the KeywordMessage type
 type KeywordMessage = {
   text: string;
 };
 
-// **Define the SuggestedItem type - Adjusted based on common API responses for suggestions**
-// אני מניח ש-AI מחזיר גם contentType ו-imageUrls כפי שמוצג ב-JSX
+// Define the SuggestedItem type
 type SuggestedItem = {
-  _id: string; // משתמש ב-_id כי זה נפוץ ב-MongoDB ותואם את ה-JSX המקורי שלך
-  contentType: "Post" | "Story" | "Reel" | string; // הוספת contentType
+  _id: string;
+  contentType: "Post" | "Story" | "Reel" | string;
   title: string;
-  content: string; // הנחתי ש-content תמיד קיים
+  content: string;
   engagementScore?: number;
   tags?: string[];
   hashtags?: string[];
-  imageUrls?: string[]; // הוספת imageUrls אם ה-AI מחזיר תמונות
+  imageUrls?: string[];
 };
 
 const CreateContentPage = () => {
-  // השתמשתי ב-aiSuggestions כפי שהיה בקוד המקורי שהעלת עם הלוגיקה הנכונה
   const [aiSuggestions, setAiSuggestions] = useState<SuggestedItem[]>([]);
   const [loadingAISuggestions, setLoadingAISuggestions] = useState(true);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
@@ -61,14 +58,14 @@ const CreateContentPage = () => {
   const concepts = ["Behind the Scenes", "Tips", "Q&A", "Promotion"];
   const lengths = ["Short", "Medium", "Long"];
 
-  // מדמה חיבור אינסטגרם אחרי חצי שניה
+  // Simulate Instagram connection after 0.5s
   useEffect(() => {
     setTimeout(() => {
       setIsInstagramConnected(true);
     }, 500);
   }, []);
 
-  // העלאת המלצות תוכן לפי חיבור אינסטגרם
+  // Fetch AI suggestions once Instagram is connected
   useEffect(() => {
     const fetchFromApi = async () => {
       setLoadingAISuggestions(true);
@@ -83,20 +80,13 @@ const CreateContentPage = () => {
           return;
         }
 
-        // קריאה ל-fetchSuggestions מה-API שהיה חסר באימפורט
         const data = await fetchSuggestions(token);
 
-        // **תיקון: ודא שאתה ניגש למבנה הנתונים הנכון מה-API**
-        // אם ה-API מחזיר אובייקט עם שדה 'suggestions' שהוא מערך:
         if (data && Array.isArray(data.suggestions)) {
           setAiSuggestions(data.suggestions);
-        } 
-        // אם ה-API מחזיר ישירות מערך:
-        else if (Array.isArray(data)) {
+        } else if (Array.isArray(data)) {
           setAiSuggestions(data);
-        } 
-        // במקרה אחר:
-        else {
+        } else {
           console.warn("API response for suggestions was not an array or expected object structure:", data);
           setAiSuggestions([]);
         }
@@ -114,7 +104,7 @@ const CreateContentPage = () => {
       setAiSuggestions([]);
       setLoadingAISuggestions(false);
     }
-  }, [isInstagramConnected]); // תלוי ב-isInstagramConnected
+  }, [isInstagramConnected]);
 
   const handleSubmitKeywords = () => {
     if (keywords.trim()) {
@@ -137,7 +127,7 @@ const CreateContentPage = () => {
     ].join(", ");
 
     setIsLoading(true);
-    setGeneratedPost(null); // נקה פוסט קודם כשמייצרים חדש
+    setGeneratedPost(null);
 
     try {
       if (trimmed) {
@@ -169,10 +159,54 @@ const CreateContentPage = () => {
     if (except !== "length") setShowLengthOptions(false);
   };
 
+  const handlePostToInstagram = async (item: SuggestedItem) => {
+    const user = JSON.parse(
+      localStorage.getItem("user") || sessionStorage.getItem("user") || "null"
+    );
+    const token = user?.token;
+
+    if (!token) {
+      alert("You must be logged in to post to Instagram.");
+      return;
+    }
+
+    try {
+      if (!item.imageUrls || item.imageUrls.length === 0) {
+        alert("No image available to post to Instagram.");
+        return;
+      }
+
+      const imageResponse = await fetch(item.imageUrls[0]);
+      const imageBlob = await imageResponse.blob();
+
+      const file = new File([imageBlob], "instagram-image.jpg", { type: imageBlob.type });
+
+      const formData = new FormData();
+      formData.append("caption", item.content);
+      formData.append("image", file);
+
+      const response = await fetch(`http://localhost:3000/instagram/post`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to post to Instagram.");
+      }
+
+      alert("Post successfully published to Instagram!");
+    } catch (error) {
+      console.error("Instagram post error:", error);
+      alert("There was a problem posting to Instagram.");
+    }
+  };
+
   return (
     <div className="container">
-       {/* אם בטעינה, תציגי את ה־Spinner מעל כל המסך */}
-+     {isLoading && <Spinner />}
+      {isLoading && <Spinner />}
 
       <Sidebar className="sidebar" />
       <div className="main-content">
@@ -208,13 +242,17 @@ const CreateContentPage = () => {
                   placeholder="Enter keywords or phrases you want in the post..."
                   value={keywords}
                   onChange={(e) => setKeywords(e.target.value)}
-                  onKeyPress={(e) => { // הוספת שליחה בלחיצת אנטר
-                    if (e.key === 'Enter') {
+                  onKeyPress={(e) => {
+                    if (e.key === "Enter") {
                       handleSubmitKeywords();
                     }
                   }}
                 />
-                <button onClick={handleSubmitKeywords} className="generate-button" disabled={isLoading}>
+                <button
+                  onClick={handleSubmitKeywords}
+                  className="generate-button"
+                  disabled={isLoading}
+                >
                   {isLoading ? (
                     <AiOutlineLoading className="loading-icon" />
                   ) : (
@@ -289,7 +327,7 @@ const CreateContentPage = () => {
                     }}
                     className="filter-header"
                   >
-                    <AiOutlineTag className="icon" /> Concept:{" "} {/* שיניתי ל-AiOutlineTag כי זה נראה יותר הגיוני ל"מושג" */}
+                    <AiOutlineTag className="icon" /> Concept:{" "}
                     <strong>{selectedConcept || "None"}</strong>
                   </li>
                   {showConceptOptions && (
@@ -339,7 +377,7 @@ const CreateContentPage = () => {
               </div>
             </div>
 
-            {/* הצגת מילות המפתח שנשלחו כתגים */}
+            {/* Display selected keywords */}
             {keywordMessages.length > 0 && (
               <div className="keyword-messages-display">
                 {keywordMessages.map((msg, index) => (
@@ -378,28 +416,28 @@ const CreateContentPage = () => {
           ) : (
             <ul className="suggested-content-list">
               {aiSuggestions.map((item) => (
-                // **תיקון: ודא ש-key הוא ייחודי. השתמשתי ב-_id כפי שקיימת במבנה ה-JSON האפשרי.**
-                // כמו כן, הסרתי את 'suggested-${item.type}' מה-className אם item.type לא מוגדר היטב
                 <li key={item._id} className="suggestion-card">
                   <div className="suggestion-info">
                     <span className="suggestion-type">
-                      {/* תיקון: ודא ש-contentType מוגדר היטב ב-SuggestedItem */}
                       {item.contentType === "Story" ? <AiOutlinePlayCircle /> : <BsImageFill />}
                       {item.contentType}
                     </span>
                     <strong>{item.title}</strong>
                     <p>{item.content}</p>
 
-                    {/* תיקון: ודא ש-imageUrls קיים לפני המיפוי */}
                     {item.imageUrls && item.imageUrls.length > 0 && (
                       <div className="suggestion-images">
                         {item.imageUrls.map((url: string, index: number) => (
-                          <img key={index} src={url} alt={`Suggestion ${index}`} className="suggestion-image" />
+                          <img
+                            key={index}
+                            src={url}
+                            alt={`Suggestion ${index}`}
+                            className="suggestion-image"
+                          />
                         ))}
                       </div>
                     )}
 
-                    {/* תיקון: ודא ש-hashtags קיים לפני המיפוי */}
                     {item.hashtags && item.hashtags.length > 0 && (
                       <div className="tags">
                         {item.hashtags.map((tag: string) => (
@@ -411,13 +449,9 @@ const CreateContentPage = () => {
 
                   <button
                     className="create-button"
-                    onClick={() => {
-                      // **תיקון: העתק את התוכן והכותרת**
-                      navigator.clipboard.writeText(`${item.title}\n\n${item.content}`);
-                      alert("Copied to clipboard!");
-                    }}
+                    onClick={() => handlePostToInstagram(item)}
                   >
-                    Copy
+                    POST NOW
                   </button>
                 </li>
               ))}

@@ -2,6 +2,29 @@ import { Request, Response, NextFunction } from "express";
 import BusinessProfile from "../models/business_profile_model";
 import ContentSuggestion from "../models/content_suggestion_model";
 import { generateContentFromProfile } from "../services/content_suggestion_service";
+import path from "path";
+import fs from "fs";
+import axios from "axios";
+
+// פונקציה להורדת תמונה ושמירתה בשרת
+async function downloadImageToUploads(imageUrl: string): Promise<string> {
+  const filename = path.basename(new URL(imageUrl).pathname);
+  const filepath = path.join(process.cwd(), "uploads", filename);
+
+  if (fs.existsSync(filepath)) {
+    return filename;
+  }
+
+  const response = await axios.get(imageUrl, { responseType: "stream" });
+
+  return new Promise((resolve, reject) => {
+    const writer = fs.createWriteStream(filepath);
+    (response.data as NodeJS.ReadableStream).pipe(writer);
+
+    writer.on("finish", () => resolve(filename));
+    writer.on("error", reject);
+  });
+}
 
 export const getOrGenerateSuggestions = async (
   req: Request,
@@ -27,7 +50,22 @@ export const getOrGenerateSuggestions = async (
         return;
       }
 
+      // מייצרים תוכן עם URL של תמונה חיצונית
       const generated = await generateContentFromProfile(profile);
+
+      // מורידים כל תמונה ושומרים ב-uploads, מחליפים את ה-URL ב-URL המקומי
+      for (const item of generated) {
+        if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
+          try {
+            // מורידים את התמונה הראשונה בלבד ומשנים את imageUrls למערך עם ה-URL המקומי
+            const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
+            item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
+          } catch (e) {
+            console.error("Error downloading image:", e);
+          }
+        }
+      }
+
       const saved = await ContentSuggestion.insertMany(
         generated.map(item => ({
           ...item,
@@ -63,6 +101,15 @@ export const refreshSingleSuggestion = async (
     }
 
     const [newContent] = await generateContentFromProfile(profile, 1);
+
+    if (newContent.imageUrls && Array.isArray(newContent.imageUrls) && newContent.imageUrls.length > 0) {
+      try {
+        const savedFilename = await downloadImageToUploads(newContent.imageUrls[0]);
+        newContent.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
+      } catch (e) {
+        console.error("Error downloading image:", e);
+      }
+    }
 
     const updated = await ContentSuggestion.findByIdAndUpdate(
       suggestionId,

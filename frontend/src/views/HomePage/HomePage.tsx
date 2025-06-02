@@ -1,4 +1,6 @@
-import React, { useRef, useState, ChangeEvent } from 'react';
+// src/pages/HomePage.tsx
+
+import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import './HomePage.css';
 import SiteVisits from '../../components/SiteVisits/SiteVisits';
 import axios from 'axios';
@@ -12,27 +14,28 @@ const Toast: React.FC<{ message: string; onClose: () => void }> = ({ message, on
   }, [onClose]);
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      transform: 'translate(-50%, -50%)',
-      backgroundColor: 'white',
-      color: '#333',
-      padding: '16px 24px',
-      borderRadius: 12,
-      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-      zIndex: 1000,
-      fontSize: 16,
-      maxWidth: 320,
-      textAlign: 'center',
-      fontWeight: '500',
-    }}>
+    <div
+      style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        backgroundColor: 'white',
+        color: '#333',
+        padding: '16px 24px',
+        borderRadius: 12,
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        zIndex: 1000,
+        fontSize: 16,
+        maxWidth: 320,
+        textAlign: 'center',
+        fontWeight: '500',
+      }}
+    >
       {message}
     </div>
   );
 };
-
 
 const postToInstagram = async (file: File, caption: string, scheduledAt?: string) => {
   const formData = new FormData();
@@ -50,37 +53,38 @@ const postToInstagram = async (file: File, caption: string, scheduledAt?: string
   }
 };
 
+type PopularPost = {
+  id: string;
+  caption: string;
+  media_url: string;
+  timestamp: string;
+  like_count: number;
+  comments_count: number;
+  engagement: number;
+};
+
+type LastPostAnalytics = { reach: string; likes: number; comments: number };
+type WebsiteAnalytics = { visitorsToday: number; bounceRate: string };
+
 const HomePage: React.FC = () => {
-  const hasInstagram = false; // בעתיד יתעדכן לאחר התחברות אמיתית
+  // state לניהול הפוסטים הפופולריים
+  const [popularContent, setPopularContent] = useState<PopularPost[]>([]);
+  const [isLoadingPopular, setIsLoadingPopular] = useState<boolean>(false);
 
-  // דמה לנתונים
-  const fakePopularContent = [
-    { title: "Building a Balanced Menu", likes: 1230, comments: 87, image: "/1.png" },
-    { title: "Morning Routine Ideas", likes: 980, comments: 45, image: "/2.png" },
-    { title: "The Most Colorful Salad", likes: 870, comments: 33, image: "/3.png" },
-  ];
-
-  type LastPostAnalytics = { reach: string; likes: number; comments: number; };
-  type WebsiteAnalytics = { visitorsToday: number; bounceRate: string; };
-
+  // שאר ה-state (לדוגמה LastPostAnalytics ו־WebsiteAnalytics)
   const fakeLastPostAnalytics: LastPostAnalytics = { reach: "5,430", likes: 630, comments: 52 };
   const fakeWebsiteAnalytics: WebsiteAnalytics = { visitorsToday: 340, bounceRate: "47%" };
 
-  const popularContent = hasInstagram ? [] : fakePopularContent;
-  const lastPostAnalytics: LastPostAnalytics = hasInstagram
-    ? { reach: "", likes: 0, comments: 0 }
-    : fakeLastPostAnalytics;
-  const websiteAnalytics: WebsiteAnalytics = hasInstagram
-    ? { visitorsToday: 0, bounceRate: "" }
-    : fakeWebsiteAnalytics;
+  const lastPostAnalytics: LastPostAnalytics = fakeLastPostAnalytics;
+  const websiteAnalytics: WebsiteAnalytics = fakeWebsiteAnalytics;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [caption, setCaption] = useState('');
-  const [scheduledAt, setScheduledAt] = useState(''); // תאריך ושעה לתיזמון
-  const [isUploading, setIsUploading] = useState(false);
+  const [caption, setCaption] = useState<string>('');
+  const [scheduledAt, setScheduledAt] = useState<string>(''); // תאריך ושעה לתיזמון
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   // state ל-toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -132,6 +136,33 @@ const HomePage: React.FC = () => {
     }
   };
 
+  useEffect(() => {
+    const fetchPopular = async () => {
+      setIsLoadingPopular(true);
+      try {
+        const res = await axios.get<{ posts: PopularPost[] }>(
+          "http://localhost:3000/instagram/popular"
+        );
+        setPopularContent(res.data.posts || []);
+      } catch (err: any) {
+        console.error("Failed to fetch popular posts:", err.response?.data || err.message);
+      } finally {
+        setIsLoadingPopular(false);
+      }
+    };
+
+    fetchPopular();
+  }, []);
+
+  // מוצא את הפוסט עם הכי הרבה מעורבות (לייקים + תגובות)
+  const mostEngagingPost = popularContent.length > 0
+    ? popularContent.reduce((top, current) => {
+        const currentEngagement = current.like_count + current.comments_count;
+        const topEngagement = top.like_count + top.comments_count;
+        return currentEngagement > topEngagement ? current : top;
+      }, popularContent[0])
+    : null;
+
   return (
     <div className="homepage">
       {/* ספינר בעת העלאה */}
@@ -164,7 +195,12 @@ const HomePage: React.FC = () => {
               <img
                 src={previewUrl}
                 alt="Selected preview"
-                style={{ maxWidth: "100%", borderRadius: 12, maxHeight: 300, objectFit: "cover" }}
+                style={{
+                  maxWidth: "100%",
+                  borderRadius: 12,
+                  maxHeight: 300,
+                  objectFit: "cover",
+                }}
               />
               <textarea
                 placeholder="Write a caption..."
@@ -210,17 +246,31 @@ const HomePage: React.FC = () => {
 
         <section className="section-box">
           <h2>Most Popular Content</h2>
-          <div className="content-cards">
-            {popularContent.map((item, index) => (
-              <div key={index} className="content-card">
-                <img src={item.image} alt={item.title} className="content-image" />
-                <strong>{item.title}</strong>
-                <br />
-                ❤️ {item.likes} <br />
-                💬 {item.comments}
-              </div>
-            ))}
-          </div>
+          {isLoadingPopular ? (
+            <p>Loading popular posts…</p>
+          ) : (
+            <div className="content-cards">
+              {!mostEngagingPost ? (
+                <p>No popular posts found in the last 30 days.</p>
+              ) : (
+                <div className="content-card">
+                  <img
+                    src={mostEngagingPost.media_url}
+                    alt={mostEngagingPost.caption || "Popular post"}
+                    className="content-image"
+                  />
+                  <strong>
+                    {mostEngagingPost.caption.length > 50
+                      ? mostEngagingPost.caption.slice(0, 50) + "…"
+                      : mostEngagingPost.caption}
+                  </strong>
+                  <br />
+                  ❤️ {mostEngagingPost.like_count} <br />
+                  💬 {mostEngagingPost.comments_count}
+                </div>
+              )}
+            </div>
+          )}
         </section>
 
         <section className="section-box">
