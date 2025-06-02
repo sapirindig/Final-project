@@ -2,12 +2,13 @@ import React, { useRef, useState, ChangeEvent } from 'react';
 import './HomePage.css';
 import SiteVisits from '../../components/SiteVisits/SiteVisits';
 import axios from 'axios';
+import UploadSpinner from "../../components/UploadSpinner/uploadSpinner";
 
 const postToInstagram = async (file: File, caption: string, scheduledAt?: string) => {
   const formData = new FormData();
   formData.append('image', file, file.name);
   formData.append('caption', caption);
-  if (scheduledAt) formData.append('scheduledAt', scheduledAt); // אם תרצה לשלוח תאריך לשרת (לא בטוח שכרגע מטופל שם)
+  if (scheduledAt) formData.append('scheduledAt', scheduledAt);
 
   try {
     const res = await axios.post('http://localhost:3000/instagram/post', formData, {
@@ -20,9 +21,9 @@ const postToInstagram = async (file: File, caption: string, scheduledAt?: string
 };
 
 const HomePage: React.FC = () => {
-  const hasInstagram = false; // In the future this will be updated based on real login.
+  const hasInstagram = false; // בעתיד יתעדכן לאחר התחברות אמיתית
 
-  // Fake Data 
+  // דמה לנתונים
   const fakePopularContent = [
     { title: "Building a Balanced Menu", likes: 1230, comments: 87, image: "/1.png" },
     { title: "Morning Routine Ideas", likes: 980, comments: 45, image: "/2.png" },
@@ -48,7 +49,8 @@ const HomePage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState('');
-  const [scheduledAt, setScheduledAt] = useState(''); // טיימר: תאריך ושעה
+  const [scheduledAt, setScheduledAt] = useState(''); // תאריך ושעה לתיזמון
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -66,23 +68,42 @@ const HomePage: React.FC = () => {
     setScheduledAt(e.target.value);
   };
 
-  const handleButtonClick = () => {
+  const handleButtonClick = async () => {
     if (!selectedFile) {
       alert('Please select an image file first.');
       return;
     }
-    postToInstagram(selectedFile, caption, scheduledAt);
+
+    if (scheduledAt) {
+      // אם יש תזמון, מציגים הודעה במקום ספינר
+      alert("📅 Your post has been scheduled and will be published as requested.");
+      try {
+        await postToInstagram(selectedFile, caption, scheduledAt);
+      } catch (err) {
+        alert("Failed to schedule post.");
+      }
+      return;
+    }
+
+    // אם אין תזמון, תהליך רגיל עם ספינר
+    setIsUploading(true);
+    try {
+      await postToInstagram(selectedFile, caption);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
     <div className="homepage">
+      {/* ספינר בעת העלאה */}
+      {isUploading && <UploadSpinner />}
+
       <header className="homepage-header">
         <h1>SocialAI</h1>
       </header>
 
       <main className="homepage-main">
-
-        {/* תיבת העלאה ותצוגה מקדימה - מתפרסת על כל רוחב */}
         <section className="section-box full-width-section" style={{ marginBottom: 30 }}>
           <h2>Post Image to Instagram</h2>
 
@@ -91,38 +112,35 @@ const HomePage: React.FC = () => {
             accept="image/*"
             ref={fileInputRef}
             onChange={handleFileChange}
-            style={{ marginTop: 10, width: '100%' }}
+            style={{ marginTop: 10, width: "100%" }}
           />
 
-          {/* תצוגה מקדימה + כיתוב */}
           {previewUrl && (
             <div
               className="preview-container"
-              style={{ marginTop: 15, display: 'flex', flexDirection: 'column', gap: 10 }}
+              style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}
             >
               <img
                 src={previewUrl}
                 alt="Selected preview"
-                style={{ maxWidth: '100%', borderRadius: 12, maxHeight: 300, objectFit: 'cover' }}
+                style={{ maxWidth: "100%", borderRadius: 12, maxHeight: 300, objectFit: "cover" }}
               />
               <textarea
                 placeholder="Write a caption..."
                 value={caption}
                 onChange={handleCaptionChange}
                 style={{
-                  width: '100%',
+                  width: "100%",
                   borderRadius: 12,
-                  border: '1px solid #ccc',
+                  border: "1px solid #ccc",
                   padding: 10,
                   fontSize: 14,
-                  resize: 'vertical',
+                  resize: "vertical",
                   minHeight: 60,
-                  fontFamily: 'Arial, sans-serif',
+                  fontFamily: "Arial, sans-serif",
                 }}
               />
-
-              {/* תיבת בחירת תאריך ושעה לפרסום מתוזמן */}
-              <label style={{ fontWeight: 'bold' }}>
+              <label style={{ fontWeight: "bold" }}>
                 Schedule Post:
                 <input
                   type="datetime-local"
@@ -132,7 +150,7 @@ const HomePage: React.FC = () => {
                     marginLeft: 10,
                     padding: 6,
                     borderRadius: 6,
-                    border: '1px solid #ccc',
+                    border: "1px solid #ccc",
                     fontSize: 14,
                   }}
                 />
@@ -145,11 +163,9 @@ const HomePage: React.FC = () => {
           </button>
         </section>
 
-        {/* מעבירים את SiteVisits למטה */}
         <section className="section-box site-visits-section">
-  <SiteVisits />
-</section>
-
+          <SiteVisits />
+        </section>
 
         <section className="section-box">
           <h2>Most Popular Content</h2>
@@ -157,7 +173,8 @@ const HomePage: React.FC = () => {
             {popularContent.map((item, index) => (
               <div key={index} className="content-card">
                 <img src={item.image} alt={item.title} className="content-image" />
-                <strong>{item.title}</strong><br />
+                <strong>{item.title}</strong>
+                <br />
                 ❤️ {item.likes} <br />
                 💬 {item.comments}
               </div>
@@ -180,9 +197,15 @@ const HomePage: React.FC = () => {
 
         <section className="section-box">
           <h2>Planning</h2>
-          <select><option>Example concept</option></select>
-          <select><option>Writing style</option></select>
-          <select><option>Length</option></select>
+          <select>
+            <option>Example concept</option>
+          </select>
+          <select>
+            <option>Writing style</option>
+          </select>
+          <select>
+            <option>Length</option>
+          </select>
         </section>
 
         <section className="section-box">
