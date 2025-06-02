@@ -4,6 +4,36 @@ import SiteVisits from '../../components/SiteVisits/SiteVisits';
 import axios from 'axios';
 import UploadSpinner from "../../components/UploadSpinner/uploadSpinner";
 
+// קומפוננטת Toast להצגת הודעות
+const Toast: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
+  React.useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      transform: 'translate(-50%, -50%)',
+      backgroundColor: 'white',
+      color: '#333',
+      padding: '16px 24px',
+      borderRadius: 12,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      zIndex: 1000,
+      fontSize: 16,
+      maxWidth: 320,
+      textAlign: 'center',
+      fontWeight: '500',
+    }}>
+      {message}
+    </div>
+  );
+};
+
+
 const postToInstagram = async (file: File, caption: string, scheduledAt?: string) => {
   const formData = new FormData();
   formData.append('image', file, file.name);
@@ -14,9 +44,9 @@ const postToInstagram = async (file: File, caption: string, scheduledAt?: string
     const res = await axios.post('http://localhost:3000/instagram/post', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    alert('Posted to Instagram! ' + JSON.stringify(res.data));
+    return res.data;
   } catch (err: any) {
-    alert('Failed to post: ' + (err.response?.data?.message || err.message));
+    throw new Error(err.response?.data?.message || err.message);
   }
 };
 
@@ -52,6 +82,13 @@ const HomePage: React.FC = () => {
   const [scheduledAt, setScheduledAt] = useState(''); // תאריך ושעה לתיזמון
   const [isUploading, setIsUploading] = useState(false);
 
+  // state ל-toast
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
@@ -70,25 +107,26 @@ const HomePage: React.FC = () => {
 
   const handleButtonClick = async () => {
     if (!selectedFile) {
-      alert('Please select an image file first.');
+      showToast('Please select an image file first.');
       return;
     }
 
     if (scheduledAt) {
-      // אם יש תזמון, מציגים הודעה במקום ספינר
-      alert("📅 Your post has been scheduled and will be published as requested.");
+      showToast("📅 Your post has been scheduled and will be published as requested.");
       try {
         await postToInstagram(selectedFile, caption, scheduledAt);
-      } catch (err) {
-        alert("Failed to schedule post.");
+      } catch (err: any) {
+        showToast("Failed to schedule post: " + err.message);
       }
       return;
     }
 
-    // אם אין תזמון, תהליך רגיל עם ספינר
     setIsUploading(true);
     try {
       await postToInstagram(selectedFile, caption);
+      showToast("Posted to Instagram immediately!");
+    } catch (err: any) {
+      showToast("Failed to post: " + err.message);
     } finally {
       setIsUploading(false);
     }
@@ -98,6 +136,9 @@ const HomePage: React.FC = () => {
     <div className="homepage">
       {/* ספינר בעת העלאה */}
       {isUploading && <UploadSpinner />}
+
+      {/* הצגת הודעות Toast */}
+      {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
       <header className="homepage-header">
         <h1>SocialAI</h1>

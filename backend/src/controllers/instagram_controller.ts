@@ -47,49 +47,88 @@ export const getInstagramPosts = async (req: Request, res: Response): Promise<vo
  */
 export const postToInstagram = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { caption } = req.body;
+    const { caption, scheduledAt } = req.body;
     const imageFile = req.file;
 
     if (!IG_USER_ID || !IG_ACCESS_TOKEN) {
       res.status(500).json({ message: "Instagram credentials not set" });
       return;
     }
-    if (!imageFile || !caption) {
-      res.status(400).json({ message: "Image and caption required" });
+    if (!imageFile) {
+      res.status(400).json({ message: "Image is required" });
       return;
     }
 
-    // 1. Read the uploaded image file
-    const imagePath = path.join(process.cwd(), imageFile.path);
-    const imageUrl = `${PUBLIC_BASE_URL}/uploads/${imageFile.filename}`;
+    const publishPost = async () => {
+      try {
+        const imagePath = path.join(process.cwd(), imageFile.path);
+        const imageUrl = `${PUBLIC_BASE_URL}/uploads/${imageFile.filename}`;
 
-    // 2. Create media object on Instagram
-    const mediaRes = await axios.post(
-      `https://graph.facebook.com/v19.0/${IG_USER_ID}/media`,
-      {
-        image_url: imageUrl,
-        caption: caption,
-        access_token: IG_ACCESS_TOKEN,
+        const mediaRes = await axios.post(
+          `https://graph.facebook.com/v19.0/${IG_USER_ID}/media`,
+          {
+            image_url: imageUrl,
+            caption: caption || '',  // אם אין caption שולחים מחרוזת ריקה
+            access_token: IG_ACCESS_TOKEN,
+          }
+        );
+
+        const creationId = (mediaRes.data as { id: string }).id;
+
+        const publishRes = await axios.post(
+          `https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`,
+          {
+            creation_id: creationId,
+            access_token: IG_ACCESS_TOKEN,
+          }
+        );
+
+        fs.unlinkSync(imagePath);
+
+        console.log("Posted to Instagram:", publishRes.data);
+      } catch (error) {
+        if (error && typeof error === "object" && "response" in error && error.response && typeof error.response === "object" && "data" in error.response) {
+          // @ts-ignore
+          console.error("Error during scheduled posting:", error.response.data);
+        } else if (error && typeof error === "object" && "message" in error) {
+          // @ts-ignore
+          console.error("Error during scheduled posting:", error.message);
+        } else {
+          console.error("Error during scheduled posting:", error);
+        }
       }
-    );
+    };
 
-    const creationId = (mediaRes.data as { id: string }).id;
+    if (scheduledAt) {
+      const scheduledDate = new Date(scheduledAt);
+      const now = new Date();
 
-    // 3. Publish the media object
-    const publishRes = await axios.post(
-      `https://graph.facebook.com/v19.0/${IG_USER_ID}/media_publish`,
-      {
-        creation_id: creationId,
-        access_token: IG_ACCESS_TOKEN,
+      if (isNaN(scheduledDate.getTime())) {
+        res.status(400).json({ message: "Invalid scheduledAt date" });
+        return;
       }
-    );
+      if (scheduledDate <= now) {
+        res.status(400).json({ message: "scheduledAt must be a future date/time" });
+        return;
+      }
 
-    // Optionally delete the local file
-    fs.unlinkSync(imagePath);
+      const delay = scheduledDate.getTime() - now.getTime();
 
-    res.status(200).json({ message: "Posted to Instagram", result: publishRes.data });
+      setTimeout(() => {
+        publishPost();
+      }, delay);
+
+      res.status(200).json({ message: `Post scheduled for ${scheduledDate.toISOString()}` });
+      return;
+    }
+
+    await publishPost();
+
+    res.status(200).json({ message: "Posted to Instagram immediately" });
+
   } catch (error: any) {
     console.error(error.response?.data || error.message);
     res.status(500).json({ message: "Failed to post to Instagram", error: error.message });
   }
 };
+
