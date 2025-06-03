@@ -61,11 +61,16 @@ type PopularPost = {
   engagement: number;
 };
 
+// ** שינוי: ממשק AiSuggestion הותאם למודל InstagramContentSuggestionDoc מה-backend **
 type AiSuggestion = {
-  id: string;
-  title: string;
+  _id: string; // ID של המונגוז, כפי שמגיע מה-DB
+  userId: string;
   content: string;
-   image?: string;
+  imageUrls: string[]; // מערך של סטרינגים, כפי שמגיע מה-DB
+  source: string;
+  createdAt: string; // יגיע כסטרינג מה-backend
+  refreshed: boolean;
+  // title?: string; // הוספתי כהערה. אם ה-AI מייצר title, יש להוסיף אותו למודל ב-backend
 };
 
 type LastPostAnalytics = { reach: string; likes: number; comments: number };
@@ -153,54 +158,58 @@ const HomePage: React.FC = () => {
       }
     };
 
- const fetchSuggestions = async () => {
-  setIsLoadingSuggestions(true);
-  try {
-    const userString = localStorage.getItem("user");
-    console.log("[fetchSuggestions] Retrieved user from localStorage:", userString);
+    const fetchSuggestions = async () => {
+      setIsLoadingSuggestions(true);
+      try {
+        const userString = localStorage.getItem("user");
+        console.log("[fetchSuggestions] Retrieved user from localStorage:", userString);
 
-    if (!userString) {
-      console.warn("[fetchSuggestions] No user data found in localStorage, aborting fetch.");
-      return;
-    }
+        if (!userString) {
+          console.warn("[fetchSuggestions] No user data found in localStorage, aborting fetch.");
+          setAiSuggestions([]); // ודא שאתה מאפס במקרה כזה
+          return;
+        }
 
-    const user = JSON.parse(userString);
-    const token = user.token;
-    const userId = user._id;
+        const user = JSON.parse(userString);
+        const token = user.token;
+        const userId = user._id;
 
-    console.log("[fetchSuggestions] Extracted token:", token);
-    console.log("[fetchSuggestions] Using userId:", userId);
+        console.log("[fetchSuggestions] Extracted token:", token);
+        console.log("[fetchSuggestions] Using userId:", userId);
 
-    if (!token) {
-      console.warn("[fetchSuggestions] Token not found inside user data, aborting fetch.");
-      return;
-    }
+        if (!token) {
+          console.warn("[fetchSuggestions] Token not found inside user data, aborting fetch.");
+          setAiSuggestions([]); // ודא שאתה מאפס במקרה כזה
+          return;
+        }
 
-    const res = await axios.get<AiSuggestion[]>(
-      `http://localhost:3000/ai/suggestions/user/${userId}`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        const res = await axios.get<AiSuggestion[]>(
+          `http://localhost:3000/ai/suggestions/user/${userId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        console.log("[fetchSuggestions] Response data:", res.data);
+
+        // ** שינוי: ודא ש-res.data הוא מערך גם אם ה-API מחזיר אובייקט עם שדה אחר **
+        // אם ה-API מחזיר { suggestions: [...] }, תשנה ל-res.data.suggestions
+        if (Array.isArray(res.data)) {
+          setAiSuggestions(res.data);
+          console.log("[fetchSuggestions] setAiSuggestions with data:", res.data);
+        } else {
+          console.warn("[fetchSuggestions] Response is not an array, setting empty array.");
+          setAiSuggestions([]);
+        }
+      } catch (err: any) {
+        console.error("[fetchSuggestions] Failed to fetch AI suggestions:", err.response?.data || err.message);
+        setAiSuggestions([]); // להימנע מהשארת סטייט ישן במקרה של כשל
+      } finally {
+        setIsLoadingSuggestions(false);
       }
-    );
-
-    console.log("[fetchSuggestions] Response data:", res.data);
-
-    if (Array.isArray(res.data)) {
-      setAiSuggestions(res.data);
-      console.log("[fetchSuggestions] setAiSuggestions with data:", res.data);
-    } else {
-      console.warn("[fetchSuggestions] Response is not array, setting empty");
-      setAiSuggestions([]);
-    }
-  } catch (err: any) {
-    console.error("[fetchSuggestions] Failed to fetch AI suggestions:", err.response?.data || err.message);
-    setAiSuggestions([]); // להימנע מהשארת סטייט ישן במקרה של כשל
-  } finally {
-    setIsLoadingSuggestions(false);
-  }
-};
+    };
     fetchPopular();
     fetchSuggestions();
   }, []);
@@ -271,6 +280,35 @@ const HomePage: React.FC = () => {
           </button>
         </section>
 
+        {/* מיקום חדש עבור Pre-generated Suggestions */}
+        <section className="section-box">
+          <h2>Pre-generated Suggestions</h2>
+          {isLoadingSuggestions ? (
+            <p>Loading AI-based suggestions...</p>
+          ) : aiSuggestions.length === 0 ? (
+            <p>No suggestions available at this time.</p>
+          ) : (
+            <div className="content-cards">
+              {aiSuggestions.slice(0, 3).map((sugg) => (
+                <div key={sugg._id} className="content-card">
+                  {sugg.imageUrls && sugg.imageUrls.length > 0 && (
+                    <img
+                      src={sugg.imageUrls[0]}
+                      alt={sugg.content.substring(0, 50)}
+                      className="content-image"
+                    />
+                  )}
+                  <strong>
+                    {sugg.content.length > 50 ? sugg.content.slice(0, 50) + "…" : sugg.content}
+                  </strong>
+                  <p>{sugg.content.length > 100 ? sugg.content.slice(0, 100) + "…" : sugg.content}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* מיקום חדש עבור Site Visits */}
         <section className="section-box site-visits-section">
           <SiteVisits />
         </section>
@@ -325,35 +363,6 @@ const HomePage: React.FC = () => {
             <option>Length</option>
           </select>
         </section>
-
-        <section className="section-box">
-  <h2>Pre-generated Suggestions</h2>
-  {isLoadingSuggestions ? (
-    <p>Loading AI-based suggestions...</p>
-  ) : aiSuggestions.length === 0 ? (
-    <p>No suggestions available at this time.</p>
-  ) : (
-    <div className="content-cards">
-      {aiSuggestions.map((sugg) => (
-        <div key={sugg.id} className="content-card">
-          {sugg.image && (
-            <img
-              src={`http://localhost:3000/${sugg.image}`}
-              alt={sugg.title}
-              className="content-image"
-            />
-          )}
-          <strong>
-            {sugg.title.length > 50 ? sugg.title.slice(0, 50) + "…" : sugg.title}
-          </strong>
-          <p>{sugg.content.length > 100 ? sugg.content.slice(0, 100) + "…" : sugg.content}</p>
-        </div>
-      ))}
-    </div>
-  )}
-</section>
-
-
       </main>
     </div>
   );

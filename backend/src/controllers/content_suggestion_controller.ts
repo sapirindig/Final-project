@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import BusinessProfile from "../models/business_profile_model";
-import ContentSuggestion from "../models/content_suggestion_model";
+import ContentSuggestion from "../models/content_suggestion_model"; // assuming this is ObjectId
+import InstagramContentSuggestion from "../models/InstagramContentSuggestion"; // assuming this is String
 import { generateContentFromProfile } from "../services/content_suggestion_service";
 import path from "path";
 import fs from "fs";
 import axios from "axios";
+import mongoose from "mongoose"; // <--- !!! חובה להוסיף את זה !!!
 
 // פונקציה להורדת תמונה ושמירתה בשרת
 async function downloadImageToUploads(imageUrl: string): Promise<string> {
@@ -47,19 +49,28 @@ async function callWithBackoff<T>(fn: () => Promise<T>, retries = 3, delayMs = 1
       }
     }
   }
-  // לא אמור להגיע לכאן, אבל להשלמה
   throw new Error("Failed after retries");
 }
 
+// *** פונקציית getOrGenerateSuggestions (לשם BusinessProfile או ContentSuggestion אם משתמש ב-ObjectId) ***
 export const getOrGenerateSuggestions = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.params.userId;
+    const userIdFromParams = req.params.userId; // זה ה-userId מגיע כסטרינג
 
-    const existing = await ContentSuggestion.find({ userId }).sort({ createdAt: -1 });
+    // ודא שה-userId הוא ObjectId חוקי לפני ההמרה (לצורך BusinessProfile ו-ContentSuggestion)
+    if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
+        console.log(`[getOrGenerateSuggestions] Invalid userId format: ${userIdFromParams}`);
+        res.status(400).json({ error: "Invalid User ID format" });
+        return;
+    }
+    const userIdAsObjectId = new mongoose.Types.ObjectId(userIdFromParams); // ממיר ל-ObjectId
+
+    // נניח ש-ContentSuggestion.userId הוא ObjectId
+    const existing = await ContentSuggestion.find({ userId: userIdAsObjectId }).sort({ createdAt: -1 });
 
     const isOutdated = existing.some(suggestion => {
       const age = Date.now() - new Date(suggestion.createdAt).getTime();
@@ -67,18 +78,16 @@ export const getOrGenerateSuggestions = async (
     });
 
     if (existing.length < 3 || isOutdated) {
-      await ContentSuggestion.deleteMany({ userId });
+      await ContentSuggestion.deleteMany({ userId: userIdAsObjectId }); // השתמש ב-ObjectId
 
-      const profile = await BusinessProfile.findOne({ userId });
+      const profile = await BusinessProfile.findOne({ userId: userIdAsObjectId }); // השתמש ב-ObjectId
       if (!profile) {
         res.status(404).json({ error: "No business profile found" });
         return;
       }
 
-      // קריאה ל-generateContentFromProfile עטופה ב-retry ו-backoff
       const generated = await callWithBackoff(() => generateContentFromProfile(profile));
 
-      // מורידים תמונות ושומרים ל-uploads
       for (const item of generated) {
         if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
           try {
@@ -93,7 +102,7 @@ export const getOrGenerateSuggestions = async (
       const saved = await ContentSuggestion.insertMany(
         generated.map(item => ({
           ...item,
-          userId,
+          userId: userIdAsObjectId, // שמור כ-ObjectId
           refreshed: false,
           createdAt: new Date()
         }))
@@ -109,6 +118,7 @@ export const getOrGenerateSuggestions = async (
   }
 };
 
+// *** פונקציית refreshSingleSuggestion (לשם BusinessProfile או ContentSuggestion אם משתמש ב-ObjectId) ***
 export const refreshSingleSuggestion = async (
   req: Request,
   res: Response,
@@ -116,15 +126,21 @@ export const refreshSingleSuggestion = async (
 ): Promise<void> => {
   try {
     const { suggestionId } = req.params;
-    const userId = req.params.userId;
+    const userIdFromParams = req.params.userId; // זה ה-userId מגיע כסטרינג
 
-    const profile = await BusinessProfile.findOne({ userId });
+    if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
+        console.log(`[refreshSingleSuggestion] Invalid userId format: ${userIdFromParams}`);
+        res.status(400).json({ error: "Invalid User ID format" });
+        return;
+    }
+    const userIdAsObjectId = new mongoose.Types.ObjectId(userIdFromParams); // ממיר ל-ObjectId
+
+    const profile = await BusinessProfile.findOne({ userId: userIdAsObjectId }); // השתמש ב-ObjectId
     if (!profile) {
       res.status(404).json({ error: "No business profile found" });
       return;
     }
 
-    // קריאה עם retry ליצירת הצעה חדשה
     const [newContent] = await callWithBackoff(() => generateContentFromProfile(profile, 1));
 
     if (newContent.imageUrls && Array.isArray(newContent.imageUrls) && newContent.imageUrls.length > 0) {
@@ -136,6 +152,7 @@ export const refreshSingleSuggestion = async (
       }
     }
 
+    // נניח ש-ContentSuggestion.userId הוא ObjectId
     const updated = await ContentSuggestion.findByIdAndUpdate(
       suggestionId,
       {
@@ -152,23 +169,22 @@ export const refreshSingleSuggestion = async (
   }
 };
 
-//show contancr from AI according to instagra details:
+// *** פונקציית getOrGenerateUserSuggestions (שלה `userId` ב-InstagramContentSuggestion הוא String) ***
 export const getOrGenerateUserSuggestions = async (
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> => {
   try {
-    const userId = req.params.userId;
+    const userIdFromParams = req.params.userId; // ה-userId כסטרינג מגיע מה-URL
 
-    console.log(`[getOrGenerateUserSuggestions] Checking suggestions for userId: ${userId}`);
+    console.log(`[getOrGenerateUserSuggestions] Checking suggestions for userId: ${userIdFromParams}`);
 
-    // מוציא את ההצעות הקיימות, ממוין מהחדש לישן
-    const existing = await ContentSuggestion.find({ userId, source: "userProfile" }).sort({ createdAt: -1 });
+    // השאילתה ל-InstagramContentSuggestion: userId הוא String, לכן משתמשים ב-userIdFromParams ישירות
+    const existing = await InstagramContentSuggestion.find({ userId: userIdFromParams, source: "userProfile" }).sort({ createdAt: -1 });
 
     console.log(`[getOrGenerateUserSuggestions] Found ${existing.length} existing suggestions`);
 
-    // בדיקה האם ההצעה החדשה ביותר ישנה מ-24 שעות
     let shouldGenerate = false;
 
     if (existing.length === 0) {
@@ -177,6 +193,7 @@ export const getOrGenerateUserSuggestions = async (
     } else {
       const newestSuggestion = existing[0];
       const age = Date.now() - new Date(newestSuggestion.createdAt).getTime();
+      // בודק אם ההצעות הקיימות ישנות מ-24 שעות
       if (age > 24 * 60 * 60 * 1000) {
         shouldGenerate = true;
         console.log(`[getOrGenerateUserSuggestions] Existing suggestions are older than 24 hours, need to generate.`);
@@ -184,41 +201,54 @@ export const getOrGenerateUserSuggestions = async (
     }
 
     if (shouldGenerate) {
-      await ContentSuggestion.deleteMany({ userId, source: "userProfile" });
+      // מחיקה ב-InstagramContentSuggestion - השתמש ב-userIdFromParams (String)
+      await InstagramContentSuggestion.deleteMany({ userId: userIdFromParams, source: "userProfile" });
+      console.log(`[getOrGenerateUserSuggestions] Deleted existing suggestions for userId: ${userIdFromParams}`);
 
-      const profile = await BusinessProfile.findOne({ userId });
+
+      // **כאן נדרשת המרה ל-ObjectId עבור BusinessProfile, כי ה-userId שלו הוא ObjectId**
+      if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
+          console.log(`[getOrGenerateUserSuggestions] Invalid userId format for BusinessProfile: ${userIdFromParams}`);
+          res.status(400).json({ error: "Invalid User ID format for Business Profile" });
+          return;
+      }
+      const userIdAsObjectIdForBusinessProfile = new mongoose.Types.ObjectId(userIdFromParams);
+
+      // חיפוש פרופיל עסקי - השתמש ב-userIdAsObjectIdForBusinessProfile (ObjectId)
+      const profile = await BusinessProfile.findOne({ userId: userIdAsObjectIdForBusinessProfile });
       if (!profile) {
-        console.log(`[getOrGenerateUserSuggestions] No business profile found for userId ${userId}`);
+        console.log(`[getOrGenerateUserSuggestions] No business profile found for userId ${userIdFromParams}`);
         res.status(404).json({ error: "No business profile found" });
         return;
       }
 
-      // קריאה עם retry ליצירת תוכן
-      const generated = await callWithBackoff(() => generateContentFromProfile(profile));
+      // ייצור תוכן חדש מה-AI
+      let generated = await callWithBackoff(() => generateContentFromProfile(profile));
 
-      // מורידים תמונות ושומרים בשרת
+      // **שינוי כאן: הגבלת התוכן המיוצר ל-3 פוסטים בלבד**
+      generated = generated.slice(0, 3);
+      console.log(`[getOrGenerateUserSuggestions] Generated ${generated.length} new suggestions (capped at 3).`);
+
+
       for (const item of generated) {
-  if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
-    try {
-      // הורדת התמונה ושמירתה בשרת
-      const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
+        if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
+          try {
+            const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
+            item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
+            console.log(`[getOrGenerateUserSuggestions] Downloaded image for suggestion: ${savedFilename}`);
+          } catch (e) {
+            console.error("Error downloading image:", e);
+            item.imageUrls = []; // הגדר ברירת מחדל אם נכשלה הורדה
+          }
+        }
+      }
 
-      // החלפת כתובת התמונה לכתובת השרת המקומי (זהה לפונקציה הראשונה)
-      item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
-    } catch (e) {
-      console.error("Error downloading image:", e);
-      // אפשר להוסיף פה הגדרת ברירת מחדל לתמונה אם רוצים
-      item.imageUrls = [];
-    }
-  }
-}
-
-
-      const saved = await ContentSuggestion.insertMany(
+      // שמירה ב-InstagramContentSuggestion - השתמש ב-userIdFromParams (String)
+      const saved = await InstagramContentSuggestion.insertMany(
         generated.map(item => ({
           ...item,
-          userId,
-          source: "userProfile",
+          userId: userIdFromParams, // שמירה כ-String
+          source: "userProfile", // ודא שזה userProfile אם זו המטרה
           refreshed: false,
           createdAt: new Date(),
         }))
@@ -230,7 +260,6 @@ export const getOrGenerateUserSuggestions = async (
       return;
     }
 
-    // מחזיר את ההצעות הישנות אם הן לא מיושנות
     console.log(`[getOrGenerateUserSuggestions] Returning existing suggestions`);
     res.status(200).json(existing);
   } catch (err) {
@@ -238,4 +267,3 @@ export const getOrGenerateUserSuggestions = async (
     next(err);
   }
 };
-
