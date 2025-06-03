@@ -1,5 +1,3 @@
-// src/pages/HomePage.tsx
-
 import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import './HomePage.css';
 import SiteVisits from '../../components/SiteVisits/SiteVisits';
@@ -63,15 +61,23 @@ type PopularPost = {
   engagement: number;
 };
 
+type AiSuggestion = {
+  id: string;
+  title: string;
+  content: string;
+   image?: string;
+};
+
 type LastPostAnalytics = { reach: string; likes: number; comments: number };
 type WebsiteAnalytics = { visitorsToday: number; bounceRate: string };
 
 const HomePage: React.FC = () => {
-  // state לניהול הפוסטים הפופולריים
   const [popularContent, setPopularContent] = useState<PopularPost[]>([]);
   const [isLoadingPopular, setIsLoadingPopular] = useState<boolean>(false);
 
-  // שאר ה-state (לדוגמה LastPostAnalytics ו־WebsiteAnalytics)
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
+
   const fakeLastPostAnalytics: LastPostAnalytics = { reach: "5,430", likes: 630, comments: 52 };
   const fakeWebsiteAnalytics: WebsiteAnalytics = { visitorsToday: 340, bounceRate: "47%" };
 
@@ -83,10 +89,8 @@ const HomePage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState<string>('');
-  const [scheduledAt, setScheduledAt] = useState<string>(''); // תאריך ושעה לתיזמון
+  const [scheduledAt, setScheduledAt] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
-
-  // state ל-toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -140,9 +144,7 @@ const HomePage: React.FC = () => {
     const fetchPopular = async () => {
       setIsLoadingPopular(true);
       try {
-        const res = await axios.get<{ posts: PopularPost[] }>(
-          "http://localhost:3000/instagram/popular"
-        );
+        const res = await axios.get<{ posts: PopularPost[] }>("http://localhost:3000/instagram/popular");
         setPopularContent(res.data.posts || []);
       } catch (err: any) {
         console.error("Failed to fetch popular posts:", err.response?.data || err.message);
@@ -151,24 +153,61 @@ const HomePage: React.FC = () => {
       }
     };
 
-    fetchPopular();
-  }, []);
+ const fetchSuggestions = async () => {
+  setIsLoadingSuggestions(true);
+  try {
+    const userString = localStorage.getItem("user");
+    console.log("[fetchSuggestions] Retrieved user from localStorage:", userString);
 
-  // מוצא את הפוסט עם הכי הרבה מעורבות (לייקים + תגובות)
-  const mostEngagingPost = popularContent.length > 0
-    ? popularContent.reduce((top, current) => {
-        const currentEngagement = current.like_count + current.comments_count;
-        const topEngagement = top.like_count + top.comments_count;
-        return currentEngagement > topEngagement ? current : top;
-      }, popularContent[0])
-    : null;
+    if (!userString) {
+      console.warn("[fetchSuggestions] No user data found in localStorage, aborting fetch.");
+      return;
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+    const userId = user._id;
+
+    console.log("[fetchSuggestions] Extracted token:", token);
+    console.log("[fetchSuggestions] Using userId:", userId);
+
+    if (!token) {
+      console.warn("[fetchSuggestions] Token not found inside user data, aborting fetch.");
+      return;
+    }
+
+    const res = await axios.get<AiSuggestion[]>(
+      `http://localhost:3000/ai/suggestions/user/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("[fetchSuggestions] Response data:", res.data);
+
+    if (Array.isArray(res.data)) {
+      setAiSuggestions(res.data);
+      console.log("[fetchSuggestions] setAiSuggestions with data:", res.data);
+    } else {
+      console.warn("[fetchSuggestions] Response is not array, setting empty");
+      setAiSuggestions([]);
+    }
+  } catch (err: any) {
+    console.error("[fetchSuggestions] Failed to fetch AI suggestions:", err.response?.data || err.message);
+    setAiSuggestions([]); // להימנע מהשארת סטייט ישן במקרה של כשל
+  } finally {
+    setIsLoadingSuggestions(false);
+  }
+};
+    fetchPopular();
+    fetchSuggestions();
+  }, []);
 
   return (
     <div className="homepage">
-      {/* ספינר בעת העלאה */}
       {isUploading && <UploadSpinner />}
-
-      {/* הצגת הודעות Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
       <header className="homepage-header">
@@ -188,19 +227,11 @@ const HomePage: React.FC = () => {
           />
 
           {previewUrl && (
-            <div
-              className="preview-container"
-              style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}
-            >
+            <div className="preview-container" style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}>
               <img
                 src={previewUrl}
                 alt="Selected preview"
-                style={{
-                  maxWidth: "100%",
-                  borderRadius: 12,
-                  maxHeight: 300,
-                  objectFit: "cover",
-                }}
+                style={{ maxWidth: "100%", borderRadius: 12, maxHeight: 300, objectFit: "cover" }}
               />
               <textarea
                 placeholder="Write a caption..."
@@ -248,27 +279,23 @@ const HomePage: React.FC = () => {
           <h2>Most Popular Content</h2>
           {isLoadingPopular ? (
             <p>Loading popular posts…</p>
+          ) : popularContent.length === 0 ? (
+            <p>No popular posts found in the last 30 days.</p>
           ) : (
             <div className="content-cards">
-              {!mostEngagingPost ? (
-                <p>No popular posts found in the last 30 days.</p>
-              ) : (
-                <div className="content-card">
+              {popularContent.slice(0, 2).map((post) => (
+                <div key={post.id} className="content-card">
                   <img
-                    src={mostEngagingPost.media_url}
-                    alt={mostEngagingPost.caption || "Popular post"}
+                    src={post.media_url}
+                    alt={post.caption || "Popular post"}
                     className="content-image"
                   />
                   <strong>
-                    {mostEngagingPost.caption.length > 50
-                      ? mostEngagingPost.caption.slice(0, 50) + "…"
-                      : mostEngagingPost.caption}
+                    {post.caption.length > 50 ? post.caption.slice(0, 50) + "…" : post.caption}
                   </strong>
-                  <br />
-                  ❤️ {mostEngagingPost.like_count} <br />
-                  💬 {mostEngagingPost.comments_count}
+                  <p>❤️ {post.like_count} &nbsp;&nbsp; 💬 {post.comments_count}</p>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </section>
@@ -300,11 +327,33 @@ const HomePage: React.FC = () => {
         </section>
 
         <section className="section-box">
-          <h2>Pre-generated Suggestions</h2>
-          <p>• 5 Tips for a Healthier Lifestyle</p>
-          <p>• Exploring the City at Night</p>
-          <p>• Secrets to Effective Time Management</p>
-        </section>
+  <h2>Pre-generated Suggestions</h2>
+  {isLoadingSuggestions ? (
+    <p>Loading AI-based suggestions...</p>
+  ) : aiSuggestions.length === 0 ? (
+    <p>No suggestions available at this time.</p>
+  ) : (
+    <div className="content-cards">
+      {aiSuggestions.map((sugg) => (
+        <div key={sugg.id} className="content-card">
+          {sugg.image && (
+            <img
+              src={`http://localhost:3000/${sugg.image}`}
+              alt={sugg.title}
+              className="content-image"
+            />
+          )}
+          <strong>
+            {sugg.title.length > 50 ? sugg.title.slice(0, 50) + "…" : sugg.title}
+          </strong>
+          <p>{sugg.content.length > 100 ? sugg.content.slice(0, 100) + "…" : sugg.content}</p>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
+
+
       </main>
     </div>
   );
