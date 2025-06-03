@@ -1,9 +1,33 @@
 .footer {
   background-color: #1e1e2f;
   color: #ffffff;
-  padding: 20px 15px;
+  padding: 40px 20px;
   font-family: 'Arial', sans-serif;
-  direction: rtl;
+  direction: ltr;
+}
+
+.footer-content {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.footer-section {
+  flex: 1 1 200px;
+  margin: 10px;
+  text-align: left;
+}
+
+.logo-section {
+  text-align: right;
+}
+
+.footer-bottom {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #aaa;
+  direction: ltr;
 }
 
 .footer-content {
@@ -68,7 +92,16 @@
 }
 
 .footer-logo {
-    max-width: 150px;
-    height: auto;
-  }
-  
+  max-width: 150px;
+  height: auto;
+}
+
+.links-section {
+  direction: ltr;
+  text-align: left;
+}
+
+.contact-section {
+  direction: ltr;
+  text-align: left;
+}
