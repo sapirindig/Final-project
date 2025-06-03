@@ -31,12 +31,23 @@
   padding: 24px;
   box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
   min-height: 260px;
-  width: 480px;
+  /* הסרתי את רוחב ה-480px הקבוע כאן.
+     במקום זה, נסמוך על grid-template-columns ב-homepage-main
+     או נגדיר max-width סביר שיאפשר לכיל לפחות כרטיס אחד ועוד חלק מהבא. */
+  /* width: 480px; */ /* <-- הסר את השורה הזו */
+  width: 100%; /* תאפשר לסקשן למלא את רוחב העמודה ב-grid */
+  max-width: 580px; /* הגדלתי כדי להכיל לפחות כרטיס אחד בנוחות ואת ההתחלה של השני */
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
 }
+
+.section-box.full-width-section { /* אם יש לך סקשן ברוחב מלא */
+    grid-column: 1 / -1; /* תופס את כל הרוחב */
+    max-width: 1200px; /* רוחב מקסימלי כמו ה-main */
+}
+
 
 .section-box h2 {
   margin-bottom: 20px;
@@ -44,19 +55,44 @@
   color: #444;
 }
 
-/* --- Focused changes for Most Popular Content --- */
+/* --- Focused changes for Most Popular Content and Pre-generated Suggestions --- */
 
 .content-cards {
   display: flex;
   gap: 24px;
-  justify-content: center;
+  /* הסרתי את justify-content: center; - זה גורם לקיצוץ כשאין מספיק מקום */
+  /* justify-content: center; */
   flex-wrap: nowrap;
-  width: 100%;
-  overflow-x: auto;
+  width: 100%; /* ודא שהקונטיינר תופס את הרוחב של ההורה */
+  overflow-x: auto; /* מאפשר גלילה אופקית */
+  /* הוסף לשיפור חווית הגלילה (אופציונלי אך מומלץ) */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory; /* לגרום לגלילה להיעצר על כרטיסים */
+  padding-bottom: 10px; /* מרווח בשביל סרגל הגלילה אם מופיע */
 }
 
+/* עיצוב סרגל הגלילה (אופציונלי) */
+.content-cards::-webkit-scrollbar {
+  height: 8px;
+}
+
+.content-cards::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.content-cards::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 10px;
+}
+
+.content-cards::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+
 .content-card {
-  flex: 0 0 280px; /* גדל מ-220px ל-280px */
+  flex: 0 0 280px; /* גדל מ-220px ל-280px. חשוב שזה יהיה הרוחב הרצוי לכרטיס */
   background: #fff;
   padding: 22px;
   border-radius: 18px;
@@ -64,6 +100,7 @@
   box-shadow: 0 8px 18px rgba(23, 23, 70, 0.09);
   cursor: pointer;
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+  scroll-snap-align: start; /* יישור הכרטיס לתחילת אזור הגלילה */
 }
 
 .content-card:hover {
@@ -73,8 +110,8 @@
 
 .content-image {
   width: 100%;
-  height: 200px; /* גדל מ-160px ל-200px */
-  object-fit: cover;
+  height: 200px; /* גדל מ-160px ל-200px. חשוב שיהיה גובה קבוע */
+  object-fit: cover; /* חותך את התמונה כדי למלא את הגובה והרוחב */
   border-radius: 16px;
   margin-bottom: 14px;
 }
@@ -122,15 +159,46 @@ button:active {
 /* Responsive adjustment for smaller screens */
 @media (max-width: 960px) {
   .homepage-main {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; /* במובייל, כל סקשן תופס עמודה שלמה */
+    padding: 10px; /* פחות פדינג במובייל */
   }
 
   .section-box {
-    width: 100%;
+    width: 100%; /* במובייל, תופס את כל הרוחב */
+    max-width: none; /* הסר הגבלת רוחב מקסימלי במובייל */
+    padding: 15px; /* פחות פדינג פנימי */
+  }
+
+  .content-cards {
+    /* אין צורך לשנות הרבה כאן, ה-flex ו-overflow-x יעבדו היטב */
   }
 
   .content-card {
-    width: 100%;
-    max-width: none;
+    /* ב-flex, flex: 0 0 280px; כבר מטפל ברוחב גם במובייל */
+    /* אם אתה רוצה שהם יהיו קטנים יותר במובייל, שנה את ה-280px */
+    flex: 0 0 250px; /* דוגמה: קטן יותר במובייל */
+    padding: 18px;
   }
+
+  .content-image {
+    height: 180px; /* התאמת גובה תמונה במובייל */
+  }
+
+  .content-card strong {
+    font-size: 16px; /* התאמת גודל טקסט במובייל */
+  }
+
+  .content-card p {
+    font-size: 14px; /* התאמת גודל טקסט במובייל */
+  }
+}
+
+/* Responsive for even smaller screens (e.g., iPhone SE) */
+@media (max-width: 400px) {
+    .content-card {
+        flex: 0 0 220px; /* עוד יותר קטן למסכים צרים במיוחד */
+    }
+    .content-image {
+        height: 150px;
+    }
 }
