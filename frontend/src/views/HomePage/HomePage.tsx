@@ -1,5 +1,3 @@
-// src/pages/HomePage.tsx
-
 import React, { useEffect, useRef, useState, ChangeEvent } from 'react';
 import './HomePage.css';
 import SiteVisits from '../../components/SiteVisits/SiteVisits';
@@ -67,11 +65,9 @@ type LastPostAnalytics = { reach: string; likes: number; comments: number };
 type WebsiteAnalytics = { visitorsToday: number; bounceRate: string };
 
 const HomePage: React.FC = () => {
-  // state לניהול הפוסטים הפופולריים
   const [popularContent, setPopularContent] = useState<PopularPost[]>([]);
   const [isLoadingPopular, setIsLoadingPopular] = useState<boolean>(false);
 
-  // שאר ה-state (לדוגמה LastPostAnalytics ו־WebsiteAnalytics)
   const fakeLastPostAnalytics: LastPostAnalytics = { reach: "5,430", likes: 630, comments: 52 };
   const fakeWebsiteAnalytics: WebsiteAnalytics = { visitorsToday: 340, bounceRate: "47%" };
 
@@ -83,10 +79,8 @@ const HomePage: React.FC = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState<string>('');
-  const [scheduledAt, setScheduledAt] = useState<string>(''); // תאריך ושעה לתיזמון
+  const [scheduledAt, setScheduledAt] = useState<string>('');
   const [isUploading, setIsUploading] = useState<boolean>(false);
-
-  // state ל-toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -140,9 +134,7 @@ const HomePage: React.FC = () => {
     const fetchPopular = async () => {
       setIsLoadingPopular(true);
       try {
-        const res = await axios.get<{ posts: PopularPost[] }>(
-          "http://localhost:3000/instagram/popular"
-        );
+        const res = await axios.get<{ posts: PopularPost[] }>("http://localhost:3000/instagram/popular");
         setPopularContent(res.data.posts || []);
       } catch (err: any) {
         console.error("Failed to fetch popular posts:", err.response?.data || err.message);
@@ -154,21 +146,9 @@ const HomePage: React.FC = () => {
     fetchPopular();
   }, []);
 
-  // מוצא את הפוסט עם הכי הרבה מעורבות (לייקים + תגובות)
-  const mostEngagingPost = popularContent.length > 0
-    ? popularContent.reduce((top, current) => {
-        const currentEngagement = current.like_count + current.comments_count;
-        const topEngagement = top.like_count + top.comments_count;
-        return currentEngagement > topEngagement ? current : top;
-      }, popularContent[0])
-    : null;
-
   return (
     <div className="homepage">
-      {/* ספינר בעת העלאה */}
       {isUploading && <UploadSpinner />}
-
-      {/* הצגת הודעות Toast */}
       {toastMessage && <Toast message={toastMessage} onClose={() => setToastMessage(null)} />}
 
       <header className="homepage-header">
@@ -188,19 +168,11 @@ const HomePage: React.FC = () => {
           />
 
           {previewUrl && (
-            <div
-              className="preview-container"
-              style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}
-            >
+            <div className="preview-container" style={{ marginTop: 15, display: "flex", flexDirection: "column", gap: 10 }}>
               <img
                 src={previewUrl}
                 alt="Selected preview"
-                style={{
-                  maxWidth: "100%",
-                  borderRadius: 12,
-                  maxHeight: 300,
-                  objectFit: "cover",
-                }}
+                style={{ maxWidth: "100%", borderRadius: 12, maxHeight: 300, objectFit: "cover" }}
               />
               <textarea
                 placeholder="Write a caption..."
@@ -248,27 +220,23 @@ const HomePage: React.FC = () => {
           <h2>Most Popular Content</h2>
           {isLoadingPopular ? (
             <p>Loading popular posts…</p>
+          ) : popularContent.length === 0 ? (
+            <p>No popular posts found in the last 30 days.</p>
           ) : (
             <div className="content-cards">
-              {!mostEngagingPost ? (
-                <p>No popular posts found in the last 30 days.</p>
-              ) : (
-                <div className="content-card">
+              {popularContent.slice(0, 2).map((post) => (
+                <div key={post.id} className="content-card">
                   <img
-                    src={mostEngagingPost.media_url}
-                    alt={mostEngagingPost.caption || "Popular post"}
+                    src={post.media_url}
+                    alt={post.caption || "Popular post"}
                     className="content-image"
                   />
                   <strong>
-                    {mostEngagingPost.caption.length > 50
-                      ? mostEngagingPost.caption.slice(0, 50) + "…"
-                      : mostEngagingPost.caption}
+                    {post.caption.length > 50 ? post.caption.slice(0, 50) + "…" : post.caption}
                   </strong>
-                  <br />
-                  ❤️ {mostEngagingPost.like_count} <br />
-                  💬 {mostEngagingPost.comments_count}
+                  <p>❤️ {post.like_count} &nbsp;&nbsp; 💬 {post.comments_count}</p>
                 </div>
-              )}
+              ))}
             </div>
           )}
         </section>
