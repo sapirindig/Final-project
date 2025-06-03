@@ -61,12 +61,22 @@ type PopularPost = {
   engagement: number;
 };
 
+type AiSuggestion = {
+  id: string;
+  title: string;
+  content: string;
+   image?: string;
+};
+
 type LastPostAnalytics = { reach: string; likes: number; comments: number };
 type WebsiteAnalytics = { visitorsToday: number; bounceRate: string };
 
 const HomePage: React.FC = () => {
   const [popularContent, setPopularContent] = useState<PopularPost[]>([]);
   const [isLoadingPopular, setIsLoadingPopular] = useState<boolean>(false);
+
+  const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
 
   const fakeLastPostAnalytics: LastPostAnalytics = { reach: "5,430", likes: 630, comments: 52 };
   const fakeWebsiteAnalytics: WebsiteAnalytics = { visitorsToday: 340, bounceRate: "47%" };
@@ -143,7 +153,56 @@ const HomePage: React.FC = () => {
       }
     };
 
+ const fetchSuggestions = async () => {
+  setIsLoadingSuggestions(true);
+  try {
+    const userString = localStorage.getItem("user");
+    console.log("[fetchSuggestions] Retrieved user from localStorage:", userString);
+
+    if (!userString) {
+      console.warn("[fetchSuggestions] No user data found in localStorage, aborting fetch.");
+      return;
+    }
+
+    const user = JSON.parse(userString);
+    const token = user.token;
+    const userId = user._id;
+
+    console.log("[fetchSuggestions] Extracted token:", token);
+    console.log("[fetchSuggestions] Using userId:", userId);
+
+    if (!token) {
+      console.warn("[fetchSuggestions] Token not found inside user data, aborting fetch.");
+      return;
+    }
+
+    const res = await axios.get<AiSuggestion[]>(
+      `http://localhost:3000/ai/suggestions/user/${userId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    console.log("[fetchSuggestions] Response data:", res.data);
+
+    if (Array.isArray(res.data)) {
+      setAiSuggestions(res.data);
+      console.log("[fetchSuggestions] setAiSuggestions with data:", res.data);
+    } else {
+      console.warn("[fetchSuggestions] Response is not array, setting empty");
+      setAiSuggestions([]);
+    }
+  } catch (err: any) {
+    console.error("[fetchSuggestions] Failed to fetch AI suggestions:", err.response?.data || err.message);
+    setAiSuggestions([]); // להימנע מהשארת סטייט ישן במקרה של כשל
+  } finally {
+    setIsLoadingSuggestions(false);
+  }
+};
     fetchPopular();
+    fetchSuggestions();
   }, []);
 
   return (
@@ -268,11 +327,33 @@ const HomePage: React.FC = () => {
         </section>
 
         <section className="section-box">
-          <h2>Pre-generated Suggestions</h2>
-          <p>• 5 Tips for a Healthier Lifestyle</p>
-          <p>• Exploring the City at Night</p>
-          <p>• Secrets to Effective Time Management</p>
-        </section>
+  <h2>Pre-generated Suggestions</h2>
+  {isLoadingSuggestions ? (
+    <p>Loading AI-based suggestions...</p>
+  ) : aiSuggestions.length === 0 ? (
+    <p>No suggestions available at this time.</p>
+  ) : (
+    <div className="content-cards">
+      {aiSuggestions.map((sugg) => (
+        <div key={sugg.id} className="content-card">
+          {sugg.image && (
+            <img
+              src={`http://localhost:3000/${sugg.image}`}
+              alt={sugg.title}
+              className="content-image"
+            />
+          )}
+          <strong>
+            {sugg.title.length > 50 ? sugg.title.slice(0, 50) + "…" : sugg.title}
+          </strong>
+          <p>{sugg.content.length > 100 ? sugg.content.slice(0, 100) + "…" : sugg.content}</p>
+        </div>
+      ))}
+    </div>
+  )}
+</section>
+
+
       </main>
     </div>
   );

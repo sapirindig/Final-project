@@ -26,6 +26,31 @@ async function downloadImageToUploads(imageUrl: string): Promise<string> {
   });
 }
 
+// פונקציה כללית עם retry ו-backoff
+async function callWithBackoff<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        if (i < retries) {
+          console.warn(`Rate limited, retrying in ${delayMs}ms...`);
+          await new Promise(r => setTimeout(r, delayMs));
+          delayMs *= 2;
+          continue;
+        } else {
+          console.error("Rate limit exceeded and max retries reached.");
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
+  // לא אמור להגיע לכאן, אבל להשלמה
+  throw new Error("Failed after retries");
+}
+
 export const getOrGenerateSuggestions = async (
   req: Request,
   res: Response,
@@ -50,14 +75,13 @@ export const getOrGenerateSuggestions = async (
         return;
       }
 
-      // מייצרים תוכן עם URL של תמונה חיצונית
-      const generated = await generateContentFromProfile(profile);
+      // קריאה ל-generateContentFromProfile עטופה ב-retry ו-backoff
+      const generated = await callWithBackoff(() => generateContentFromProfile(profile));
 
-      // מורידים כל תמונה ושומרים ב-uploads, מחליפים את ה-URL ב-URL המקומי
+      // מורידים תמונות ושומרים ל-uploads
       for (const item of generated) {
         if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
           try {
-            // מורידים את התמונה הראשונה בלבד ומשנים את imageUrls למערך עם ה-URL המקומי
             const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
             item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
           } catch (e) {
@@ -100,7 +124,8 @@ export const refreshSingleSuggestion = async (
       return;
     }
 
-    const [newContent] = await generateContentFromProfile(profile, 1);
+    // קריאה עם retry ליצירת הצעה חדשה
+    const [newContent] = await callWithBackoff(() => generateContentFromProfile(profile, 1));
 
     if (newContent.imageUrls && Array.isArray(newContent.imageUrls) && newContent.imageUrls.length > 0) {
       try {
@@ -126,3 +151,91 @@ export const refreshSingleSuggestion = async (
     next(err);
   }
 };
+
+//show contancr from AI according to instagra details:
+export const getOrGenerateUserSuggestions = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): Promise<void> => {
+  try {
+    const userId = req.params.userId;
+
+    console.log(`[getOrGenerateUserSuggestions] Checking suggestions for userId: ${userId}`);
+
+    // מוציא את ההצעות הקיימות, ממוין מהחדש לישן
+    const existing = await ContentSuggestion.find({ userId, source: "userProfile" }).sort({ createdAt: -1 });
+
+    console.log(`[getOrGenerateUserSuggestions] Found ${existing.length} existing suggestions`);
+
+    // בדיקה האם ההצעה החדשה ביותר ישנה מ-24 שעות
+    let shouldGenerate = false;
+
+    if (existing.length === 0) {
+      shouldGenerate = true;
+      console.log(`[getOrGenerateUserSuggestions] No existing suggestions, need to generate.`);
+    } else {
+      const newestSuggestion = existing[0];
+      const age = Date.now() - new Date(newestSuggestion.createdAt).getTime();
+      if (age > 24 * 60 * 60 * 1000) {
+        shouldGenerate = true;
+        console.log(`[getOrGenerateUserSuggestions] Existing suggestions are older than 24 hours, need to generate.`);
+      }
+    }
+
+    if (shouldGenerate) {
+      await ContentSuggestion.deleteMany({ userId, source: "userProfile" });
+
+      const profile = await BusinessProfile.findOne({ userId });
+      if (!profile) {
+        console.log(`[getOrGenerateUserSuggestions] No business profile found for userId ${userId}`);
+        res.status(404).json({ error: "No business profile found" });
+        return;
+      }
+
+      // קריאה עם retry ליצירת תוכן
+      const generated = await callWithBackoff(() => generateContentFromProfile(profile));
+
+      // מורידים תמונות ושומרים בשרת
+      for (const item of generated) {
+  if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
+    try {
+      // הורדת התמונה ושמירתה בשרת
+      const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
+
+      // החלפת כתובת התמונה לכתובת השרת המקומי (זהה לפונקציה הראשונה)
+      item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
+    } catch (e) {
+      console.error("Error downloading image:", e);
+      // אפשר להוסיף פה הגדרת ברירת מחדל לתמונה אם רוצים
+      item.imageUrls = [];
+    }
+  }
+}
+
+
+      const saved = await ContentSuggestion.insertMany(
+        generated.map(item => ({
+          ...item,
+          userId,
+          source: "userProfile",
+          refreshed: false,
+          createdAt: new Date(),
+        }))
+      );
+
+      console.log(`[getOrGenerateUserSuggestions] Saved ${saved.length} new suggestions`);
+
+      res.status(200).json(saved);
+      return;
+    }
+
+    // מחזיר את ההצעות הישנות אם הן לא מיושנות
+    console.log(`[getOrGenerateUserSuggestions] Returning existing suggestions`);
+    res.status(200).json(existing);
+  } catch (err) {
+    console.error(`[getOrGenerateUserSuggestions] Error:`, err);
+    next(err);
+  }
+};
+

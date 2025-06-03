@@ -16,7 +16,6 @@ async function downloadImageToUploads(imageUrl: string): Promise<string> {
   const filename = path.basename(new URL(imageUrl).pathname);
   const filepath = path.join(process.cwd(), "uploads", filename);
 
-  // אם כבר יש קובץ כזה, לא יוריד שוב
   if (fs.existsSync(filepath)) {
     return filename;
   }
@@ -30,6 +29,72 @@ async function downloadImageToUploads(imageUrl: string): Promise<string> {
     writer.on("finish", () => resolve(filename));
     writer.on("error", reject);
   });
+}
+
+// פונקציה עם retry ו-backoff לקריאת יצירת תמונה
+async function generateImageWithBackoff(prompt: string, retries = 3, delayMs = 1000): Promise<string | null> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const imageResponse = await openai.images.generate({
+        model: "dall-e-3",
+        prompt,
+        n: 1,
+        size: "1024x1024",
+      });
+
+      if (imageResponse.data && imageResponse.data.length > 0) {
+        return imageResponse.data[0].url ?? null;
+      }
+      return null;
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        if (i < retries) {
+          console.warn(`Rate limited by OpenAI, retrying in ${delayMs}ms...`);
+          await new Promise(r => setTimeout(r, delayMs));
+          delayMs *= 2;
+          continue;
+        } else {
+          console.error("Rate limit exceeded and max retries reached.");
+          return null;
+        }
+      } else {
+        console.error("OpenAI image generation error:", error);
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+// פונקציה חדשה עם retry ו-backoff לקריאת צ'אט OpenAI
+async function chatWithBackoff(
+  messages: any[],
+  retries = 3,
+  delayMs = 1000
+): Promise<any> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages,
+      });
+      return completion;
+    } catch (error: any) {
+      if (error.response?.status === 429) {
+        if (i < retries) {
+          console.warn(`Rate limited by OpenAI chat, retrying in ${delayMs}ms...`);
+          await new Promise(r => setTimeout(r, delayMs));
+          delayMs *= 2;
+          continue;
+        } else {
+          console.error("Rate limit exceeded and max retries reached on chat.");
+          throw error;
+        }
+      } else {
+        throw error;
+      }
+    }
+  }
 }
 
 const chatWithAI = async (req: Request, res: Response): Promise<void> => {
@@ -48,29 +113,27 @@ const chatWithAI = async (req: Request, res: Response): Promise<void> => {
     }
 
     if (imageUrl) {
-      // במקרה שיש תמונת משתמש, אפשר להוסיף כאן טיפול מתאים, לדוגמה:
       userContent.push({
         type: "image_url",
         image_url: {
-          url: imageUrl, // שלח URL ישיר לתמונה שהמשתמש העלה
+          url: imageUrl,
         },
       });
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content:
-            'את עוזרת אישית יצירתית לרשתות חברתיות. תני מענה קצר וחכם למשתמש. אם יש צורך בתמונות לפוסט, תארי במדויק איזו תמונה יכולה להתאים. למשל: "image: תיאור התמונה."',
-        },
-        {
-          role: "user",
-          content: userContent,
-        },
-      ],
-    });
+    const messages = [
+      {
+        role: "system",
+        content:
+          'את עוזרת אישית יצירתית לרשתות חברתיות. תני מענה קצר וחכם למשתמש. אם יש צורך בתמונות לפוסט, תארי במדויק איזו תמונה יכולה להתאים. למשל: "image: תיאור התמונה."',
+      },
+      {
+        role: "user",
+        content: userContent,
+      },
+    ];
+
+    const completion = await chatWithBackoff(messages);
 
     let aiResponse = completion.choices[0].message?.content;
     let generatedImageUrl = null;
@@ -79,23 +142,13 @@ const chatWithAI = async (req: Request, res: Response): Promise<void> => {
       const imageDescription = aiResponse.match(/image:\s*(.*)/)?.[1]?.trim();
 
       if (imageDescription) {
-        const imageResponse = await openai.images.generate({
-          model: "dall-e-3",
-          prompt: imageDescription,
-          n: 1,
-          size: "1024x1024",
-        });
+        const externalUrl = await generateImageWithBackoff(imageDescription);
 
-        if (imageResponse.data && imageResponse.data.length > 0) {
-          const externalUrl = imageResponse.data[0].url;
-
-          if (externalUrl) {
-            // הורדת התמונה ושמירתה בתיקיית uploads
-            const savedFilename = await downloadImageToUploads(externalUrl);
-
-            // החזרת URL מקומי לתמונה
-            generatedImageUrl = `http://localhost:3000/uploads/${savedFilename}`;
-          }
+        if (externalUrl) {
+          const savedFilename = await downloadImageToUploads(externalUrl);
+          generatedImageUrl = `http://localhost:3000/uploads/${savedFilename}`;
+        } else {
+          generatedImageUrl = "http://localhost:3000/uploads/placeholder.png";
         }
       }
     }
