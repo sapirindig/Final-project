@@ -3,6 +3,12 @@ import './HomePage.css';
 import SiteVisits from '../../components/SiteVisits/SiteVisits';
 import axios from 'axios';
 import UploadSpinner from "../../components/UploadSpinner/uploadSpinner";
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+// @ts-ignore
+
+
 
 // קומפוננטת Toast להצגת הודעות
 const Toast: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
@@ -78,7 +84,10 @@ type WebsiteAnalytics = { visitorsToday: number; bounceRate: string };
 
 const HomePage: React.FC = () => {
   const [popularContent, setPopularContent] = useState<PopularPost[]>([]);
+  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [isLoadingPopular, setIsLoadingPopular] = useState<boolean>(false);
+  
+
 
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
@@ -86,7 +95,6 @@ const HomePage: React.FC = () => {
   const fakeLastPostAnalytics: LastPostAnalytics = { reach: "5,430", likes: 630, comments: 52 };
   const fakeWebsiteAnalytics: WebsiteAnalytics = { visitorsToday: 340, bounceRate: "47%" };
 
-  const lastPostAnalytics: LastPostAnalytics = fakeLastPostAnalytics;
   const websiteAnalytics: WebsiteAnalytics = fakeWebsiteAnalytics;
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -211,6 +219,16 @@ const HomePage: React.FC = () => {
       }
     };
     fetchPopular();
+        const fetchMonthlyStats = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/api/instagram/monthly");
+        setMonthlyStats(res.data || []);
+      } catch (err: any) {
+        console.error("Failed to fetch monthly stats:", err.response?.data || err.message);
+      }
+    };
+
+    fetchMonthlyStats();
     fetchSuggestions();
   }, []);
 
@@ -338,12 +356,35 @@ const HomePage: React.FC = () => {
           )}
         </section>
 
-        <section className="section-box">
-          <h2>Last Post Analytics</h2>
-          <p>Reach: {lastPostAnalytics.reach}</p>
-          <p>Likes: {lastPostAnalytics.likes}</p>
-          <p>Comments: {lastPostAnalytics.comments}</p>
+         <section className="section-box">
+          <h2>Monthly Performance (Likes & Comments)</h2>
+          {monthlyStats.length === 0 ? (
+            <p>No data available.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+  {/* @ts-ignore */}
+  <LineChart data={monthlyStats}>
+    {/* @ts-ignore */}
+    <CartesianGrid strokeDasharray="3 3" />
+    {/* @ts-ignore */}
+    <XAxis dataKey="date" />
+    {/* @ts-ignore */}
+    <YAxis />
+    {/* @ts-ignore */}
+    <Tooltip />
+    {/* @ts-ignore */}
+    <Legend />
+    {/* @ts-ignore */}
+    <Line type="monotone" dataKey="likes" stroke="#8884d8" />
+    {/* @ts-ignore */}
+    <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
+  {/* @ts-ignore */}
+  </LineChart>
+</ResponsiveContainer>
+
+          )}
         </section>
+
 
         <section className="section-box">
           <h2>Website Analytics</h2>

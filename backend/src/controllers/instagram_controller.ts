@@ -179,3 +179,51 @@ export const getPopularInstagramPosts = async (req: Request, res: Response): Pro
     res.status(500).json({ message: "Failed to fetch posts", error: error.message });
   }
 };
+
+
+export const getMonthlyStats = async (req: Request, res: Response): Promise<void> => {
+  if (!IG_ACCESS_TOKEN || !IG_USER_ID) {
+    res.status(500).json({ message: "Instagram credentials not configured" });
+    return;
+  }
+
+  try {
+    const IG_USER_ID = process.env.IG_USER_ID;
+    const ACCESS_TOKEN = process.env.IG_ACCESS_TOKEN;
+
+    const url = `https://graph.facebook.com/v19.0/${IG_USER_ID}/media?fields=id,timestamp,like_count,comments_count,media_type&access_token=${IG_ACCESS_TOKEN}`;
+    const response = await axios.get<{ data: Array<any> }>(url);
+    const posts = response.data.data;
+
+    const now = new Date();
+    const last30 = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+    const filtered = posts.filter(post => 
+      post.media_type === "IMAGE" && 
+      new Date(post.timestamp) >= last30
+    );
+
+    console.log("📊 פוסטים שנמצאו:", filtered);
+
+    const dailyStats: Record<string, { likes: number; comments: number }> = {};
+
+    for (const post of filtered) {
+      const date = post.timestamp.slice(0, 10); // YYYY-MM-DD
+      if (!dailyStats[date]) {
+        dailyStats[date] = { likes: 0, comments: 0 };
+      }
+      dailyStats[date].likes += post.like_count || 0;
+      dailyStats[date].comments += post.comments_count || 0;
+    }
+
+    const statsArray = Object.entries(dailyStats)
+      .map(([date, values]) => ({ date, ...values }))
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    res.status(200).json(statsArray);
+  } catch (err: any) {
+    console.error("Error fetching monthly stats:", err.response?.data || err.message);
+    res.status(500).json({ message: "Failed to fetch stats", error: err.message });
+  }
+};
+

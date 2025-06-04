@@ -36,9 +36,9 @@ app.get("/", (req, res) => {
 });
 app.use("/business-profile", businessProfileRoutes);
 app.use("/api/chat", chatRoutes);
-app.use("/instagram", instagramRoutes);
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.use("/ai", contentSuggestionRoutes);
+app.use("/api/instagram", instagramRoutes);
 
 
 
