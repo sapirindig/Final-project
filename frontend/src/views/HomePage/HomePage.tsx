@@ -326,11 +326,36 @@ const HomePage: React.FC = () => {
           )}
         </section>
 
-        {/* מיקום חדש עבור Site Visits */}
-        <section className="section-box site-visits-section">
-          <SiteVisits />
+        <section className="section-box">
+          <h2>Monthly Performance (Likes & Comments)</h2>
+          {monthlyStats.length === 0 ? (
+            <p>No data available.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+  {/* @ts-ignore */}
+  <LineChart data={monthlyStats}>
+    {/* @ts-ignore */}
+    <CartesianGrid strokeDasharray="3 3" />
+    {/* @ts-ignore */}
+    <XAxis dataKey="date" />
+    {/* @ts-ignore */}
+    <YAxis />
+    {/* @ts-ignore */}
+    <Tooltip />
+    {/* @ts-ignore */}
+    <Legend />
+    {/* @ts-ignore */}
+    <Line type="monotone" dataKey="likes" stroke="#8884d8" />
+    {/* @ts-ignore */}
+    <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
+  {/* @ts-ignore */}
+  </LineChart>
+            </ResponsiveContainer>
+
+          )}
         </section>
 
+        
         <section className="section-box">
           <h2>Most Popular Content</h2>
           {isLoadingPopular ? (
@@ -356,33 +381,9 @@ const HomePage: React.FC = () => {
           )}
         </section>
 
-         <section className="section-box">
-          <h2>Monthly Performance (Likes & Comments)</h2>
-          {monthlyStats.length === 0 ? (
-            <p>No data available.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-  {/* @ts-ignore */}
-  <LineChart data={monthlyStats}>
-    {/* @ts-ignore */}
-    <CartesianGrid strokeDasharray="3 3" />
-    {/* @ts-ignore */}
-    <XAxis dataKey="date" />
-    {/* @ts-ignore */}
-    <YAxis />
-    {/* @ts-ignore */}
-    <Tooltip />
-    {/* @ts-ignore */}
-    <Legend />
-    {/* @ts-ignore */}
-    <Line type="monotone" dataKey="likes" stroke="#8884d8" />
-    {/* @ts-ignore */}
-    <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
-  {/* @ts-ignore */}
-  </LineChart>
-</ResponsiveContainer>
-
-          )}
+         {/* מיקום חדש עבור Site Visits */}
+        <section className="section-box site-visits-section">
+          <SiteVisits />
         </section>
 
 
