@@ -15,12 +15,8 @@ import { BiText } from "react-icons/bi";
 import sendIcon from "../../Images/white-send.png";
 import Spinner from "../../components/Spinner/Spinner";
 
-// Define the KeywordMessage type
-type KeywordMessage = {
-  text: string;
-};
-
-// Define the SuggestedItem type
+// סוגים
+type KeywordMessage = { text: string };
 type SuggestedItem = {
   _id: string;
   contentType: "Post" | "Story" | "Reel" | string;
@@ -50,7 +46,6 @@ const CreateContentPage = () => {
   const [keywords, setKeywords] = useState<string>("");
   const [keywordMessages, setKeywordMessages] = useState<KeywordMessage[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
   const [generatedPost, setGeneratedPost] = useState<string | null>(null);
 
   const contentTypes = ["Post", "Story", "Reel"];
@@ -58,14 +53,14 @@ const CreateContentPage = () => {
   const concepts = ["Behind the Scenes", "Tips", "Q&A", "Promotion"];
   const lengths = ["Short", "Medium", "Long"];
 
-  // Simulate Instagram connection after 0.5s
+  // סימולציה של חיבור לאינסטגרם
   useEffect(() => {
     setTimeout(() => {
       setIsInstagramConnected(true);
     }, 500);
   }, []);
 
-  // Fetch AI suggestions once Instagram is connected
+  // טעינת הצעות AI
   useEffect(() => {
     const fetchFromApi = async () => {
       setLoadingAISuggestions(true);
@@ -79,25 +74,22 @@ const CreateContentPage = () => {
           setAiSuggestions([]);
           return;
         }
-
         const data = await fetchSuggestions(token);
-
         if (data && Array.isArray(data.suggestions)) {
           setAiSuggestions(data.suggestions);
         } else if (Array.isArray(data)) {
           setAiSuggestions(data);
         } else {
-          console.warn("API response for suggestions was not an array or expected object structure:", data);
+          console.warn("API response structure:", data);
           setAiSuggestions([]);
         }
       } catch (error) {
-        console.error("Error fetching suggested posts:", error);
+        console.error("Error fetching suggestions:", error);
         setAiSuggestions([]);
       } finally {
         setLoadingAISuggestions(false);
       }
     };
-
     if (isInstagramConnected) {
       fetchFromApi();
     } else {
@@ -106,6 +98,7 @@ const CreateContentPage = () => {
     }
   }, [isInstagramConnected]);
 
+  // פונקציות ניהול
   const handleSubmitKeywords = () => {
     if (keywords.trim()) {
       setKeywordMessages((prev) => [...prev, { text: keywords }]);
@@ -115,25 +108,20 @@ const CreateContentPage = () => {
 
   const handleGenerateContent = async () => {
     const trimmed = keywords.trim();
-
     if (!trimmed && keywordMessages.length === 0) {
       alert("Please enter some keywords.");
       return;
     }
-
     const allKeywords = [
       ...keywordMessages.map((msg) => msg.text),
       ...(trimmed ? [trimmed] : []),
     ].join(", ");
-
     setIsLoading(true);
     setGeneratedPost(null);
-
     try {
       if (trimmed) {
         setKeywordMessages((prev) => [...prev, { text: trimmed }]);
       }
-
       const post = await generatePostFromAI({
         keywords: allKeywords,
         contentType: selectedContentType ?? "",
@@ -141,7 +129,6 @@ const CreateContentPage = () => {
         concept: selectedConcept ?? "",
         length: selectedLength ?? "",
       });
-
       setGeneratedPost(post);
       setKeywords("");
     } catch (error) {
@@ -159,6 +146,7 @@ const CreateContentPage = () => {
     if (except !== "length") setShowLengthOptions(false);
   };
 
+  // פונקציה להעלאת פוסט ל-Instagram
   const handlePostToInstagram = async (item: SuggestedItem) => {
     const user = JSON.parse(
       localStorage.getItem("user") || sessionStorage.getItem("user") || "null"
@@ -185,7 +173,7 @@ const CreateContentPage = () => {
       formData.append("caption", item.content);
       formData.append("image", file);
 
-      const response = await fetch(`http://localhost:3000/instagram/post`, {
+      const response = await fetch(`http://localhost:3000/api/instagram/post`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -234,7 +222,9 @@ const CreateContentPage = () => {
               Share your content preferences and key points — get tailored, ready-to-use content instantly.
             </div>
 
+            {/* כניסה לאינטראקטיביות */}
             <div className="inputs-filters-container">
+              {/* שדה טקסט לכניסת מילות מפתח */}
               <div className="keywords-input-area">
                 <input
                   type="text"
@@ -261,9 +251,10 @@ const CreateContentPage = () => {
                 </button>
               </div>
 
+              {/* פילטרים */}
               <div className="filter-options">
                 <ul>
-                  {/* Content Type Filter */}
+                  {/* סוג תוכן */}
                   <li
                     onClick={() => {
                       closeOtherDropdowns("contentType");
@@ -291,7 +282,7 @@ const CreateContentPage = () => {
                     </ul>
                   )}
 
-                  {/* Writing Style Filter */}
+                  {/* סגנון כתיבה */}
                   <li
                     onClick={() => {
                       closeOtherDropdowns("writingStyle");
@@ -319,7 +310,7 @@ const CreateContentPage = () => {
                     </ul>
                   )}
 
-                  {/* Concept Filter */}
+                  {/* רעיון */}
                   <li
                     onClick={() => {
                       closeOtherDropdowns("concept");
@@ -347,7 +338,7 @@ const CreateContentPage = () => {
                     </ul>
                   )}
 
-                  {/* Length Filter */}
+                  {/* אורך */}
                   <li
                     onClick={() => {
                       closeOtherDropdowns("length");
@@ -377,7 +368,7 @@ const CreateContentPage = () => {
               </div>
             </div>
 
-            {/* Display selected keywords */}
+            {/* הצגת מילות מפתח */}
             {keywordMessages.length > 0 && (
               <div className="keyword-messages-display">
                 {keywordMessages.map((msg, index) => (
@@ -386,6 +377,7 @@ const CreateContentPage = () => {
               </div>
             )}
 
+            {/* תצוגת טקסט שנוצר */}
             {generatedPost && (
               <div className="generated-post-preview">
                 <h3>Generated Post Preview:</h3>
@@ -393,6 +385,7 @@ const CreateContentPage = () => {
               </div>
             )}
 
+            {/* כפתור גנרציה */}
             <div className="generate-post-container">
               <button
                 onClick={handleGenerateContent}
@@ -405,6 +398,7 @@ const CreateContentPage = () => {
           </div>
         </div>
 
+        {/* חלק ההצעות מ-Instagram */}
         <div className="section suggested-content-section">
           <h2>Suggested Content From Instagram</h2>
           {loadingAISuggestions ? (
@@ -447,6 +441,7 @@ const CreateContentPage = () => {
                     )}
                   </div>
 
+                  {/* כפתור POST NOW */}
                   <button
                     className="create-button"
                     onClick={() => handlePostToInstagram(item)}

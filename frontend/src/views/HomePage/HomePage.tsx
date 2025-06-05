@@ -7,8 +7,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
 // @ts-ignore
-
-
+import SuggestionModal from '../../components/SuggestionModal/SuggestionModal';
 
 // קומפוננטת Toast להצגת הודעות
 const Toast: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => {
@@ -48,7 +47,7 @@ const postToInstagram = async (file: File, caption: string, scheduledAt?: string
   if (scheduledAt) formData.append('scheduledAt', scheduledAt);
 
   try {
-    const res = await axios.post('http://localhost:3000/instagram/post', formData, {
+    const res = await axios.post('http://localhost:3000/api/instagram/post', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
@@ -69,14 +68,13 @@ type PopularPost = {
 
 // ** שינוי: ממשק AiSuggestion הותאם למודל InstagramContentSuggestionDoc מה-backend **
 type AiSuggestion = {
-  _id: string; // ID של המונגוז, כפי שמגיע מה-DB
+  _id: string;
   userId: string;
   content: string;
-  imageUrls: string[]; // מערך של סטרינגים, כפי שמגיע מה-DB
+  imageUrls: string[];
   source: string;
-  createdAt: string; // יגיע כסטרינג מה-backend
-  refreshed: boolean;
-  // title?: string; // הוספתי כהערה. אם ה-AI מייצר title, יש להוסיף אותו למודל ב-backend
+  createdAt: string;
+  refrEShed: boolean;
 };
 
 type LastPostAnalytics = { reach: string; likes: number; comments: number };
@@ -86,11 +84,12 @@ const HomePage: React.FC = () => {
   const [popularContent, setPopularContent] = useState<PopularPost[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [isLoadingPopular, setIsLoadingPopular] = useState<boolean>(false);
-  
-
-
   const [aiSuggestions, setAiSuggestions] = useState<AiSuggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState<boolean>(false);
+
+  // סטייט לניהול ה-Modal וההצעה שנבחרה
+  const [selectedSuggestion, setSelectedSuggestion] = useState<AiSuggestion | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const fakeLastPostAnalytics: LastPostAnalytics = { reach: "5,430", likes: 630, comments: 52 };
   const fakeWebsiteAnalytics: WebsiteAnalytics = { visitorsToday: 340, bounceRate: "47%" };
@@ -153,11 +152,17 @@ const HomePage: React.FC = () => {
     }
   };
 
+  // פונקציה לטיפול בלחיצה על הצעה
+  const handleSuggestionClick = (suggestion: AiSuggestion) => {
+    setSelectedSuggestion(suggestion);
+    setIsModalOpen(true);
+  };
+
   useEffect(() => {
     const fetchPopular = async () => {
       setIsLoadingPopular(true);
       try {
-        const res = await axios.get<{ posts: PopularPost[] }>("http://localhost:3000/instagram/popular");
+        const res = await axios.get<{ posts: PopularPost[] }>("http://localhost:3000/api/instagram/popular");
         setPopularContent(res.data.posts || []);
       } catch (err: any) {
         console.error("Failed to fetch popular posts:", err.response?.data || err.message);
@@ -202,11 +207,9 @@ const HomePage: React.FC = () => {
 
         console.log("[fetchSuggestions] Response data:", res.data);
 
-        // ** שינוי: ודא ש-res.data הוא מערך גם אם ה-API מחזיר אובייקט עם שדה אחר **
-        // אם ה-API מחזיר { suggestions: [...] }, תשנה ל-res.data.suggestions
+        // ודא ש-res.data הוא מערך
         if (Array.isArray(res.data)) {
           setAiSuggestions(res.data);
-          console.log("[fetchSuggestions] setAiSuggestions with data:", res.data);
         } else {
           console.warn("[fetchSuggestions] Response is not an array, setting empty array.");
           setAiSuggestions([]);
@@ -218,8 +221,8 @@ const HomePage: React.FC = () => {
         setIsLoadingSuggestions(false);
       }
     };
-    fetchPopular();
-        const fetchMonthlyStats = async () => {
+
+    const fetchMonthlyStats = async () => {
       try {
         const res = await axios.get("http://localhost:3000/api/instagram/monthly");
         setMonthlyStats(res.data || []);
@@ -228,6 +231,7 @@ const HomePage: React.FC = () => {
       }
     };
 
+    fetchPopular();
     fetchMonthlyStats();
     fetchSuggestions();
   }, []);
@@ -308,7 +312,12 @@ const HomePage: React.FC = () => {
           ) : (
             <div className="content-cards">
               {aiSuggestions.slice(0, 3).map((sugg) => (
-                <div key={sugg._id} className="content-card">
+                <div 
+                  key={sugg._id} 
+                  className="content-card" 
+                  onClick={() => handleSuggestionClick(sugg)} // הלחיצה על כרטיס
+                  style={{ cursor: 'pointer' }}
+                >
                   {sugg.imageUrls && sugg.imageUrls.length > 0 && (
                     <img
                       src={sugg.imageUrls[0]}
@@ -326,9 +335,43 @@ const HomePage: React.FC = () => {
           )}
         </section>
 
-        {/* מיקום חדש עבור Site Visits */}
-        <section className="section-box site-visits-section">
-          <SiteVisits />
+        {/* הוספת ה-Modal */}
+        <SuggestionModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          suggestion={selectedSuggestion}
+          onPostNow={(suggestion) => {
+            // כאן תוכל לכתוב את הלוגיקה של הפוסט לשרת או רשתות חברתיות
+            console.log("Posting suggestion:", suggestion);
+            setIsModalOpen(false);
+          }}
+        />
+
+        <section className="section-box">
+          <h2>Monthly Performance (Likes & Comments)</h2>
+          {monthlyStats.length === 0 ? (
+            <p>No data available.</p>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              {/* @ts-ignore */}
+              <LineChart data={monthlyStats}>
+                {/* @ts-ignore */}
+                <CartesianGrid strokeDasharray="3 3" />
+                {/* @ts-ignore */}
+                <XAxis dataKey="date" />
+                {/* @ts-ignore */}
+                <YAxis />
+                {/* @ts-ignore */}
+                <Tooltip />
+                {/* @ts-ignore */}
+                <Legend />
+                {/* @ts-ignore */}
+                <Line type="monotone" dataKey="likes" stroke="#8884d8" />
+                {/* @ts-ignore */}
+                <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </section>
 
         <section className="section-box">
@@ -349,42 +392,17 @@ const HomePage: React.FC = () => {
                   <strong>
                     {post.caption.length > 50 ? post.caption.slice(0, 50) + "…" : post.caption}
                   </strong>
-                  <p>❤️ {post.like_count} &nbsp;&nbsp; 💬 {post.comments_count}</p>
+                  <p>❤️ {post.like_count}    💬 {post.comments_count}</p>
                 </div>
               ))}
             </div>
           )}
         </section>
 
-         <section className="section-box">
-          <h2>Monthly Performance (Likes & Comments)</h2>
-          {monthlyStats.length === 0 ? (
-            <p>No data available.</p>
-          ) : (
-            <ResponsiveContainer width="100%" height={300}>
-  {/* @ts-ignore */}
-  <LineChart data={monthlyStats}>
-    {/* @ts-ignore */}
-    <CartesianGrid strokeDasharray="3 3" />
-    {/* @ts-ignore */}
-    <XAxis dataKey="date" />
-    {/* @ts-ignore */}
-    <YAxis />
-    {/* @ts-ignore */}
-    <Tooltip />
-    {/* @ts-ignore */}
-    <Legend />
-    {/* @ts-ignore */}
-    <Line type="monotone" dataKey="likes" stroke="#8884d8" />
-    {/* @ts-ignore */}
-    <Line type="monotone" dataKey="comments" stroke="#82ca9d" />
-  {/* @ts-ignore */}
-  </LineChart>
-</ResponsiveContainer>
-
-          )}
+        {/* מיקום חדש עבור Site Visits */}
+        <section className="section-box site-visits-section">
+          <SiteVisits />
         </section>
-
 
         <section className="section-box">
           <h2>Website Analytics</h2>
