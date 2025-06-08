@@ -15,17 +15,29 @@
 }
 
 .main-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-    padding: 40px 40px 40px 0;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+padding: 40px 10px 40px 10px;
+  background: linear-gradient(to bottom right, #f9f9fc, #f0f2fa);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+
+
+
 .header-container {
-    margin-bottom: 30px;
-    text-align: center;
+  margin-bottom: 30px;
+  text-align: left; /* יישור לשמאל */
+  padding-left: 10px; /* כדי להתאים לרובריקות */
+  max-width: 800px; /* זהה לרוחב הקוביות */
+  margin-left: 10px;
+  padding-bottom: 10px;
+border-bottom: 1px solid #e0e0e0;
+
 }
+
 
 h1 {
     font-size: 2.2em;
@@ -47,6 +59,7 @@ h1 {
     margin-bottom: 30px;
     justify-content: center;
     flex-wrap: wrap; /* הוספתי לרספונסיביות */
+    
 }
 
 .ai-generated-content {
@@ -57,8 +70,8 @@ h1 {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
     max-width: 800px;
     width: 100%;
-    display: flex; /* הוספתי כדי לאפשר סידור עמודות */
-    flex-direction: column; /* סידור ילדים בטור */
+    display: flex; 
+    flex-direction: column;
 }
 
 .ai-generated-content .details {
@@ -353,11 +366,21 @@ h1 {
 }
 
 .section {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background-color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  padding: 30px;
+margin-left: 10px;
+margin-right: auto;
+
+margin-bottom: 30px;
+  transition: all 0.3s ease;
 }
+
 
 /* התאמות רספונסיביות */
 @media (max-width: 768px) {
@@ -385,3 +408,31 @@ h1 {
 .post-now-button:hover {
     background-color: #218838;
 }
+
+
+.chat-section {
+  width: 100%;
+  max-width: 100% !important;
+  margin-left: 10px;
+  margin-right: auto;
+  background-color: #fff;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  padding: 30px;
+  box-sizing: border-box;
+}
+
+
+
+.chat-section h2 {
+  font-size: 1.4em;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  color: #333;
+}
+
+
+
+
+
