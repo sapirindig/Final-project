@@ -210,7 +210,7 @@ const CreateContentPage = () => {
           )}
         </div>
 
-        <div className="section">
+<div className="chat-section">
           <h2 className="section-title">Talk with AI</h2>
           <ChatBox />
         </div>
