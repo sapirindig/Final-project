@@ -1,269 +1,314 @@
 import { Request, Response, NextFunction } from "express";
-import BusinessProfile from "../models/business_profile_model";
-import ContentSuggestion from "../models/content_suggestion_model"; // assuming this is ObjectId
-import InstagramContentSuggestion from "../models/InstagramContentSuggestion"; // assuming this is String
-import { generateContentFromProfile } from "../services/content_suggestion_service";
+import BusinessProfile from "../models/business_profile_model"; // וודא שהנתיב למודל זה נכון
+import ContentSuggestion from "../models/content_suggestion_model"; // וודא שהנתיב למודל זה נכון
+import InstagramContentSuggestion from "../models/InstagramContentSuggestion";
+import { generateContentFromProfile, fetchAndStoreInstagramPosts } from "../services/content_suggestion_service"; // וודא שהנתיב נכון
 import path from "path";
 import fs from "fs";
 import axios from "axios";
-import mongoose from "mongoose"; // <--- !!! חובה להוסיף את זה !!!
+import mongoose from "mongoose";
 
-// פונקציה להורדת תמונה ושמירתה בשרת
+// פונקציית עזר: הורדת תמונה ושמירתה בשרת
 async function downloadImageToUploads(imageUrl: string): Promise<string> {
-  const filename = path.basename(new URL(imageUrl).pathname);
-  const filepath = path.join(process.cwd(), "uploads", filename);
+    const filename = path.basename(new URL(imageUrl).pathname);
+    const filepath = path.join(process.cwd(), "uploads", filename);
 
-  if (fs.existsSync(filepath)) {
-    return filename;
-  }
+    if (fs.existsSync(filepath)) {
+        console.log(`[downloadImageToUploads] Image already exists: ${filename}`);
+        return filename;
+    }
 
-  const response = await axios.get(imageUrl, { responseType: "stream" });
-
-  return new Promise((resolve, reject) => {
-    const writer = fs.createWriteStream(filepath);
-    (response.data as NodeJS.ReadableStream).pipe(writer);
-
-    writer.on("finish", () => resolve(filename));
-    writer.on("error", reject);
-  });
-}
-
-// פונקציה כללית עם retry ו-backoff
-async function callWithBackoff<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): Promise<T> {
-  for (let i = 0; i <= retries; i++) {
     try {
-      return await fn();
-    } catch (error: any) {
-      if (error.response?.status === 429) {
-        if (i < retries) {
-          console.warn(`Rate limited, retrying in ${delayMs}ms...`);
-          await new Promise(r => setTimeout(r, delayMs));
-          delayMs *= 2;
-          continue;
-        } else {
-          console.error("Rate limit exceeded and max retries reached.");
-          throw error;
-        }
-      } else {
+        const response = await axios.get(imageUrl, { responseType: "stream" });
+        return new Promise((resolve, reject) => {
+            const writer = fs.createWriteStream(filepath);
+            (response.data as NodeJS.ReadableStream).pipe(writer);
+            writer.on("finish", () => {
+                console.log(`[downloadImageToUploads] Image downloaded and saved: ${filename}`);
+                resolve(filename);
+            });
+            writer.on("error", (err) => {
+                console.error(`[downloadImageToUploads] Error writing image file ${filename}:`, err);
+                reject(err);
+            });
+        });
+    } catch (error) {
+        console.error(`[downloadImageToUploads] Failed to download image from ${imageUrl}:`, error);
         throw error;
-      }
     }
-  }
-  throw new Error("Failed after retries");
 }
 
-// *** פונקציית getOrGenerateSuggestions (לשם BusinessProfile או ContentSuggestion אם משתמש ב-ObjectId) ***
-export const getOrGenerateSuggestions = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userIdFromParams = req.params.userId; // זה ה-userId מגיע כסטרינג
-
-    // ודא שה-userId הוא ObjectId חוקי לפני ההמרה (לצורך BusinessProfile ו-ContentSuggestion)
-    if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
-        console.log(`[getOrGenerateSuggestions] Invalid userId format: ${userIdFromParams}`);
-        res.status(400).json({ error: "Invalid User ID format" });
-        return;
-    }
-    const userIdAsObjectId = new mongoose.Types.ObjectId(userIdFromParams); // ממיר ל-ObjectId
-
-    // נניח ש-ContentSuggestion.userId הוא ObjectId
-    const existing = await ContentSuggestion.find({ userId: userIdAsObjectId }).sort({ createdAt: -1 });
-
-    const isOutdated = existing.some(suggestion => {
-      const age = Date.now() - new Date(suggestion.createdAt).getTime();
-      return age > 24 * 60 * 60 * 1000;
-    });
-
-    if (existing.length < 3 || isOutdated) {
-      await ContentSuggestion.deleteMany({ userId: userIdAsObjectId }); // השתמש ב-ObjectId
-
-      const profile = await BusinessProfile.findOne({ userId: userIdAsObjectId }); // השתמש ב-ObjectId
-      if (!profile) {
-        res.status(404).json({ error: "No business profile found" });
-        return;
-      }
-
-      const generated = await callWithBackoff(() => generateContentFromProfile(profile));
-
-      for (const item of generated) {
-        if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
-          try {
-            const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
-            item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
-          } catch (e) {
-            console.error("Error downloading image:", e);
-          }
+// פונקציית עזר: retry עם backoff
+async function callWithBackoff<T>(fn: () => Promise<T>, retries = 3, delayMs = 1000): Promise<T> {
+    for (let i = 0; i <= retries; i++) {
+        try {
+            return await fn();
+        } catch (error: any) {
+            if (error.response?.status === 429 && i < retries) {
+                console.warn(`[callWithBackoff] Rate limited, retrying in ${delayMs}ms...`);
+                await new Promise(r => setTimeout(r, delayMs));
+                delayMs *= 2;
+                continue;
+            } else {
+                console.error(`[callWithBackoff] Error on retry attempt ${i + 1}/${retries + 1}:`, error.message);
+                throw error;
+            }
         }
-      }
-
-      const saved = await ContentSuggestion.insertMany(
-        generated.map(item => ({
-          ...item,
-          userId: userIdAsObjectId, // שמור כ-ObjectId
-          refreshed: false,
-          createdAt: new Date()
-        }))
-      );
-
-      res.status(200).json(saved);
-      return;
     }
+    throw new Error("[callWithBackoff] Failed after retries");
+}
 
-    res.status(200).json(existing);
-  } catch (err) {
-    next(err);
-  }
+/**
+ * פונקציה 1: יצירת הצעות תוכן על פי BusinessProfile (userId הוא ObjectId)
+ */
+export const getOrGenerateSuggestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    console.log("[getOrGenerateSuggestions] Request received.");
+    try {
+        const userIdStr = req.params.userId;
+        if (!mongoose.Types.ObjectId.isValid(userIdStr)) {
+            console.warn("[getOrGenerateSuggestions] Invalid User ID format:", userIdStr);
+            res.status(400).json({ error: "Invalid User ID format" });
+            return;
+        }
+        const userId = new mongoose.Types.ObjectId(userIdStr);
+
+        const existing = await ContentSuggestion.find({ userId }).sort({ createdAt: -1 });
+        const isOutdated = existing.some(s => Date.now() - new Date(s.createdAt).getTime() > 24 * 60 * 60 * 1000);
+
+        if (existing.length < 3 || isOutdated) {
+            console.log("[getOrGenerateSuggestions] Generating new general suggestions: less than 3 or outdated.");
+            await ContentSuggestion.deleteMany({ userId });
+            console.log(`[getOrGenerateSuggestions] Deleted old general content suggestions for userId: ${userIdStr}`);
+
+            const profile = await BusinessProfile.findOne({ userId });
+            if (!profile) {
+                console.error("[getOrGenerateSuggestions] No business profile found for userId:", userIdStr);
+                res.status(404).json({ error: "No business profile found" });
+                return;
+            }
+
+            // קריאה ל-AI עם פרופיל בלבד (ללא userId ו-accessToken)
+            const generated = await callWithBackoff(() => generateContentFromProfile(profile, undefined, undefined, 3));
+            console.log(`[getOrGenerateSuggestions] AI generated ${generated.length} general suggestions.`);
+
+            for (const item of generated) {
+                if (item.imageUrls?.length) {
+                    try {
+                        const filename = await downloadImageToUploads(item.imageUrls[0]);
+                        item.imageUrls = [`http://localhost:3000/uploads/${filename}`];
+                    } catch (e) {
+                        console.error("[getOrGenerateSuggestions] Error downloading image for general suggestion:", e);
+                        // במקרה של כשל, תשאיר ריק או ברירת מחדל
+                        item.imageUrls = [];
+                    }
+                }
+            }
+
+            console.log(`[getOrGenerateSuggestions] Attempting to save ${generated.length} new general suggestions.`);
+            const saved = await ContentSuggestion.insertMany(
+                generated.map(item => ({ ...item, userId, refreshed: false, createdAt: new Date() }))
+            );
+            console.log(`[getOrGenerateSuggestions] Successfully saved ${saved.length} new general suggestions.`);
+
+            res.status(200).json(saved);
+            return;
+        }
+
+        console.log(`[getOrGenerateSuggestions] Returning ${existing.length} existing general suggestions.`);
+        res.status(200).json(existing);
+    } catch (err) {
+        console.error("[getOrGenerateSuggestions] Unhandled error:", err);
+        next(err);
+    }
 };
 
-// *** פונקציית refreshSingleSuggestion (לשם BusinessProfile או ContentSuggestion אם משתמש ב-ObjectId) ***
-export const refreshSingleSuggestion = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const { suggestionId } = req.params;
-    const userIdFromParams = req.params.userId; // זה ה-userId מגיע כסטרינג
+/**
+ * פונקציה 2: ריענון הצעה ספציפית לפי BusinessProfile (userId ObjectId)
+ */
+export const refreshSingleSuggestion = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    console.log("[refreshSingleSuggestion] Request received.");
+    try {
+        const { suggestionId } = req.params;
+        const userIdStr = req.params.userId;
 
-    if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
-        console.log(`[refreshSingleSuggestion] Invalid userId format: ${userIdFromParams}`);
-        res.status(400).json({ error: "Invalid User ID format" });
-        return;
+        if (!mongoose.Types.ObjectId.isValid(userIdStr)) {
+            console.warn("[refreshSingleSuggestion] Invalid User ID format:", userIdStr);
+            res.status(400).json({ error: "Invalid User ID format" });
+            return;
+        }
+        const userId = new mongoose.Types.ObjectId(userIdStr);
+
+        const profile = await BusinessProfile.findOne({ userId });
+        if (!profile) {
+            console.error("[refreshSingleSuggestion] No business profile found for userId:", userIdStr);
+            res.status(404).json({ error: "No business profile found" });
+            return;
+        }
+
+        // יוצרים הצעה חדשה אחת
+        const [newContent] = await callWithBackoff(() => generateContentFromProfile(profile, undefined, undefined, 1));
+        console.log("[refreshSingleSuggestion] AI generated 1 new suggestion for refresh.");
+
+
+        if (newContent.imageUrls?.length) {
+            try {
+                const filename = await downloadImageToUploads(newContent.imageUrls[0]);
+                newContent.imageUrls = [`http://localhost:3000/uploads/${filename}`];
+            } catch (e) {
+                console.error("[refreshSingleSuggestion] Error downloading image for single suggestion refresh:", e);
+                newContent.imageUrls = [];
+            }
+        }
+
+        console.log(`[refreshSingleSuggestion] Attempting to update suggestionId: ${suggestionId}`);
+        const updated = await ContentSuggestion.findByIdAndUpdate(
+            suggestionId,
+            { ...newContent, refreshed: true, createdAt: new Date() },
+            { new: true }
+        );
+
+        if (!updated) {
+            console.warn(`[refreshSingleSuggestion] Suggestion with ID ${suggestionId} not found for update.`);
+            res.status(404).json({ error: "Suggestion not found" });
+            return;
+        }
+
+        console.log(`[refreshSingleSuggestion] Successfully updated suggestionId: ${suggestionId}`);
+        res.status(200).json(updated);
+    } catch (err) {
+        console.error("[refreshSingleSuggestion] Unhandled error:", err);
+        next(err);
     }
-    const userIdAsObjectId = new mongoose.Types.ObjectId(userIdFromParams); // ממיר ל-ObjectId
-
-    const profile = await BusinessProfile.findOne({ userId: userIdAsObjectId }); // השתמש ב-ObjectId
-    if (!profile) {
-      res.status(404).json({ error: "No business profile found" });
-      return;
-    }
-
-    const [newContent] = await callWithBackoff(() => generateContentFromProfile(profile, 1));
-
-    if (newContent.imageUrls && Array.isArray(newContent.imageUrls) && newContent.imageUrls.length > 0) {
-      try {
-        const savedFilename = await downloadImageToUploads(newContent.imageUrls[0]);
-        newContent.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
-      } catch (e) {
-        console.error("Error downloading image:", e);
-      }
-    }
-
-    // נניח ש-ContentSuggestion.userId הוא ObjectId
-    const updated = await ContentSuggestion.findByIdAndUpdate(
-      suggestionId,
-      {
-        ...newContent,
-        refreshed: true,
-        createdAt: new Date(),
-      },
-      { new: true }
-    );
-
-    res.status(200).json(updated);
-  } catch (err) {
-    next(err);
-  }
 };
 
-// *** פונקציית getOrGenerateUserSuggestions (שלה `userId` ב-InstagramContentSuggestion הוא String) ***
-export const getOrGenerateUserSuggestions = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userIdFromParams = req.params.userId; // ה-userId כסטרינג מגיע מה-URL
+/**
+ * פונקציה 3: יצירת הצעות תוכן לפי ניתוח אינסטגרם (userId הוא string)
+ */
+export const getOrGenerateUserSuggestions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    console.log("[getOrGenerateUserSuggestions] Request received.");
+    try {
+        const userId = req.params.userId; // userId הוא string כאן
+        const accessToken = req.query.accessToken as string;
 
-    console.log(`[getOrGenerateUserSuggestions] Checking suggestions for userId: ${userIdFromParams}`);
-
-    // השאילתה ל-InstagramContentSuggestion: userId הוא String, לכן משתמשים ב-userIdFromParams ישירות
-    const existing = await InstagramContentSuggestion.find({ userId: userIdFromParams, source: "userProfile" }).sort({ createdAt: -1 });
-
-    console.log(`[getOrGenerateUserSuggestions] Found ${existing.length} existing suggestions`);
-
-    let shouldGenerate = false;
-
-    if (existing.length === 0) {
-      shouldGenerate = true;
-      console.log(`[getOrGenerateUserSuggestions] No existing suggestions, need to generate.`);
-    } else {
-      const newestSuggestion = existing[0];
-      const age = Date.now() - new Date(newestSuggestion.createdAt).getTime();
-      // בודק אם ההצעות הקיימות ישנות מ-24 שעות
-      if (age > 24 * 60 * 60 * 1000) {
-        shouldGenerate = true;
-        console.log(`[getOrGenerateUserSuggestions] Existing suggestions are older than 24 hours, need to generate.`);
-      }
-    }
-
-    if (shouldGenerate) {
-      // מחיקה ב-InstagramContentSuggestion - השתמש ב-userIdFromParams (String)
-      await InstagramContentSuggestion.deleteMany({ userId: userIdFromParams, source: "userProfile" });
-      console.log(`[getOrGenerateUserSuggestions] Deleted existing suggestions for userId: ${userIdFromParams}`);
-
-
-      // **כאן נדרשת המרה ל-ObjectId עבור BusinessProfile, כי ה-userId שלו הוא ObjectId**
-      if (!mongoose.Types.ObjectId.isValid(userIdFromParams)) {
-          console.log(`[getOrGenerateUserSuggestions] Invalid userId format for BusinessProfile: ${userIdFromParams}`);
-          res.status(400).json({ error: "Invalid User ID format for Business Profile" });
-          return;
-      }
-      const userIdAsObjectIdForBusinessProfile = new mongoose.Types.ObjectId(userIdFromParams);
-
-      // חיפוש פרופיל עסקי - השתמש ב-userIdAsObjectIdForBusinessProfile (ObjectId)
-      const profile = await BusinessProfile.findOne({ userId: userIdAsObjectIdForBusinessProfile });
-      if (!profile) {
-        console.log(`[getOrGenerateUserSuggestions] No business profile found for userId ${userIdFromParams}`);
-        res.status(404).json({ error: "No business profile found" });
-        return;
-      }
-
-      // ייצור תוכן חדש מה-AI
-      let generated = await callWithBackoff(() => generateContentFromProfile(profile));
-
-      // **שינוי כאן: הגבלת התוכן המיוצר ל-3 פוסטים בלבד**
-      generated = generated.slice(0, 3);
-      console.log(`[getOrGenerateUserSuggestions] Generated ${generated.length} new suggestions (capped at 3).`);
-
-
-      for (const item of generated) {
-        if (item.imageUrls && Array.isArray(item.imageUrls) && item.imageUrls.length > 0) {
-          try {
-            const savedFilename = await downloadImageToUploads(item.imageUrls[0]);
-            item.imageUrls = [`http://localhost:3000/uploads/${savedFilename}`];
-            console.log(`[getOrGenerateUserSuggestions] Downloaded image for suggestion: ${savedFilename}`);
-          } catch (e) {
-            console.error("Error downloading image:", e);
-            item.imageUrls = []; // הגדר ברירת מחדל אם נכשלה הורדה
-          }
+        if (!accessToken) {
+            console.warn("[getOrGenerateUserSuggestions] Missing Instagram access token for userId:", userId);
+            res.status(400).json({ error: "Missing Instagram access token" });
+            return;
         }
-      }
 
-      // שמירה ב-InstagramContentSuggestion - השתמש ב-userIdFromParams (String)
-      const saved = await InstagramContentSuggestion.insertMany(
-        generated.map(item => ({
-          ...item,
-          userId: userIdFromParams, // שמירה כ-String
-          source: "userProfile", // ודא שזה userProfile אם זו המטרה
-          refreshed: false,
-          createdAt: new Date(),
-        }))
-      );
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            console.warn("[getOrGenerateUserSuggestions] Invalid User ID format for Business Profile:", userId);
+            res.status(400).json({ error: "Invalid User ID format for Business Profile" });
+            return;
+        }
+        const userIdAsObjectId = new mongoose.Types.ObjectId(userId);
 
-      console.log(`[getOrGenerateUserSuggestions] Saved ${saved.length} new suggestions`);
+        // 1. מחפשים הצעות קיימות עבור המשתמש ממקור "userProfile"
+        const existingSuggestions = await InstagramContentSuggestion.find({ userId, source: "userProfile" })
+            .sort({ createdAt: -1 })
+            .exec();
 
-      res.status(200).json(saved);
-      return;
+        const latestSuggestion = existingSuggestions.length > 0 ? existingSuggestions[0] : null;
+
+        console.log(`[getOrGenerateUserSuggestions] Checking Instagram suggestions for userId: ${userId}`);
+
+        let shouldGenerate = false;
+
+        if (!latestSuggestion) {
+            console.log("[getOrGenerateUserSuggestions] No existing Instagram content suggestions found. Generating new ones immediately.");
+            shouldGenerate = true;
+        } else {
+            const age = Date.now() - new Date(latestSuggestion.createdAt).getTime();
+            console.log(`[getOrGenerateUserSuggestions] Latest Instagram suggestion found. Age: ${age / (1000 * 60 * 60)} hours.`);
+
+            if (age > 24 * 60 * 60 * 1000) {
+                console.log("[getOrGenerateUserSuggestions] Existing Instagram suggestions are outdated (>24h). Will generate new ones.");
+                shouldGenerate = true;
+            } else if (existingSuggestions.length < 3) {
+                console.log("[getOrGenerateUserSuggestions] Less than 3 existing Instagram suggestions found. Will generate new ones.");
+                shouldGenerate = true;
+            } else {
+                console.log("[getOrGenerateUserSuggestions] Existing Instagram suggestions are still fresh and sufficient.");
+            }
+        }
+
+        if (shouldGenerate) {
+            console.log(`[getOrGenerateUserSuggestions] Proceeding to generate new suggestions for userId: ${userId}.`);
+
+            // --- בדיקה לפני המחיקה ---
+            const countBeforeDelete = await InstagramContentSuggestion.countDocuments({ userId, source: "userProfile" });
+            console.log(`[getOrGenerateUserSuggestions - Before Delete] Found ${countBeforeDelete} existing Instagram suggestions.`);
+
+            const deleteResult = await InstagramContentSuggestion.deleteMany({ userId, source: "userProfile" });
+            console.log(`[getOrGenerateUserSuggestions - After Delete] Deleted ${deleteResult.deletedCount} old/insufficient Instagram content suggestions.`);
+
+            const profile = await BusinessProfile.findOne({ userId: userIdAsObjectId });
+            if (!profile) {
+                console.error("[getOrGenerateUserSuggestions] No business profile found for userId:", userId);
+                res.status(404).json({ error: "No business profile found" });
+                return;
+            }
+
+            console.log("[getOrGenerateUserSuggestions] Calling AI to generate content from profile and Instagram posts...");
+            let generated = await callWithBackoff(() =>
+                generateContentFromProfile(profile, userId, accessToken, 3, true)
+            );
+            console.log(`[getOrGenerateUserSuggestions] AI generated ${generated.length} content suggestions.`);
+
+            for (const item of generated) {
+                if (item.imageUrls?.length) {
+                    try {
+                        const filename = await downloadImageToUploads(item.imageUrls[0]);
+                        item.imageUrls = [`http://localhost:3000/uploads/${filename}`];
+                    } catch (e) {
+                        console.error("[getOrGenerateUserSuggestions] Error downloading image for Instagram suggestion:", e);
+                        item.imageUrls = [];
+                    }
+                }
+            }
+
+            // --- בדיקה לפני השמירה ---
+            console.log(`[getOrGenerateUserSuggestions - Before Save] Attempting to save ${generated.length} new Instagram suggestions.`);
+            if (generated.length > 0) {
+                console.log("[getOrGenerateUserSuggestions - Before Save] First generated item to be saved:", JSON.stringify(generated[0], null, 2));
+            } else {
+                console.log("[getOrGenerateUserSuggestions - Before Save] No items generated to save.");
+            }
+
+
+            try {
+                const saved = await InstagramContentSuggestion.insertMany(
+                    generated.map(item => ({
+                        ...item,
+                        userId,
+                        source: "userProfile",
+                        refreshed: false,
+                        createdAt: new Date(),
+                    }))
+                );
+                console.log(`[getOrGenerateUserSuggestions - After Save SUCCESS] Successfully saved ${saved.length} new Instagram content suggestions.`);
+                res.status(200).json(saved);
+            } catch (saveError) {
+                console.error("❌ [getOrGenerateUserSuggestions - ERROR during insertMany]", saveError);
+                // בדוק את סוג השגיאה והצג הודעה מתאימה
+                if (saveError instanceof mongoose.Error.ValidationError) {
+                    console.error("MongoDB Validation Error:", saveError.message, saveError.errors);
+                    res.status(400).json({ error: "Validation failed during save", details: saveError.message });
+                } else if ((saveError as any).code === 11000) { // Duplicate key error
+                    console.error("MongoDB Duplicate Key Error:", (saveError as any).message);
+                    res.status(409).json({ error: "Duplicate content suggestion found (might be an indexing issue)", details: (saveError as any).message });
+                } else {
+                    res.status(500).json({ error: "Failed to save Instagram suggestions to database", details: (saveError as Error).message });
+                }
+            }
+
+        } else {
+            console.log(`[getOrGenerateUserSuggestions] Returning ${existingSuggestions.length} existing Instagram content suggestions.`);
+            res.status(200).json(existingSuggestions);
+        }
+
+    } catch (err) {
+        console.error("[getOrGenerateUserSuggestions] Unhandled error in controller:", err);
+        next(err);
     }
-
-    console.log(`[getOrGenerateUserSuggestions] Returning existing suggestions`);
-    res.status(200).json(existing);
-  } catch (err) {
-    console.error(`[getOrGenerateUserSuggestions] Error:`, err);
-    next(err);
-  }
 };
