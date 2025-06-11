@@ -64,7 +64,7 @@ const SuggestionModal: React.FC<SuggestionModalProps> = ({
 
       // שליחת הבקשה עם axios
       const response = await axios.post(
-        "http://localhost:3000/api/instagram/post",
+        "http://aisocial.dev/api/api/instagram/post",
         formData,
         {
           headers: {

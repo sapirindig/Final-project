@@ -173,7 +173,7 @@ const CreateContentPage = () => {
       formData.append("caption", item.content);
       formData.append("image", file);
 
-      const response = await fetch(`http://localhost:3000/api/instagram/post`, {
+      const response = await fetch(`http://aisocial.dev/api/api/instagram/post`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

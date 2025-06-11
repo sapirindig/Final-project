@@ -1,2 +1,2 @@
-GET http://localhost:3000/ai/suggestions
+GET http://aisocial.dev/api/ai/suggestions
 Authorization: Bearer 

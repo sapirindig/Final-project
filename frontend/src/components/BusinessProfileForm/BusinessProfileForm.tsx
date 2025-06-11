@@ -31,11 +31,9 @@ type BusinessProfileFormType = {
 };
 
 const BusinessProfileForm: React.FC = () => {
-  const { isLoggedIn } = useContext(AuthContext);
-  const storedUser = localStorage.getItem("user");
-  const parsed = storedUser ? JSON.parse(storedUser) : null;
-  const token = parsed?.token || null;
-  const userId = parsed?._id || null;
+  const { isLoggedIn, user } = useContext(AuthContext);
+  const token = user?.token;
+  const userId = user?._id;
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState<BusinessProfileFormType>({
@@ -156,15 +154,15 @@ const BusinessProfileForm: React.FC = () => {
     }
   };
 
-  // חיבור לאינסטגרם
   const connectInstagram = () => {
-    const APP_ID = "YOUR_APP_ID_HERE";
-    const REDIRECT_URI = "https://your-social-manager.com/auth/instagram/popup-callback";
-    const SCOPE = "user_profile,user_media";
-    const authUrl = `https://api.instagram.com/oauth/authorize?client_id=${APP_ID}&redirect_uri=${encodeURIComponent(
-      REDIRECT_URI
-    )}&scope=${SCOPE}&response_type=code`;
+    if (!token || !userId) {
+      console.error("No authentication token or userId found");
+      navigate('/login');
+      return;
+    }
 
+    const authUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=665994033060068&redirect_uri=aisocial.dev&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`;
+    
     const width = 600;
     const height = 700;
     const left = window.screenX + (window.innerWidth - width) / 2;
@@ -176,30 +174,35 @@ const BusinessProfileForm: React.FC = () => {
       `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
     );
 
-    const timer = setInterval(() => {
-      if (!popup || popup.closed) {
-        clearInterval(timer);
-        console.log("Instagram popup closed");
-      }
-    }, 500);
+    window.addEventListener("message", async (event) => {
+      if (event.origin !== window.location.origin) return;
+      
+      if (event.data.type === "INSTAGRAM_AUTH" && event.data.code) {
+        try {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/auth/instagram/callback`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ 
+              code: event.data.code,
+              userId: userId  // Add userId to the request body
+            })
+          });
 
-    window.addEventListener(
-      "message",
-      (event) => {
-        if (
-          event.origin !== "https://your-social-manager.com" &&
-          event.origin !== "http://localhost:3000"
-        ) {
-          return;
+          if (response.ok) {
+            const data = await response.json();
+            alert("Successfully connected to Instagram!");
+          } else {
+            throw new Error("Failed to exchange Instagram code");
+          }
+        } catch (error) {
+          console.error("Instagram auth error:", error);
+          alert("Failed to connect Instagram account");
         }
-        const msg = event.data;
-        if (msg.type === "instagram_auth_success" && msg.code) {
-          console.log("Auth code:", msg.code);
-          alert("Instagram auth successful!");
-        }
-      },
-      { once: true }
-    );
+      }
+    }, { once: true });
   };
 
   if (!isLoggedIn || !token || !userId) {

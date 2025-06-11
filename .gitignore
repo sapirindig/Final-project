@@ -5,3 +5,4 @@ coverage/
 .DS_Store
 front.env
 back.env
+backend/uploads

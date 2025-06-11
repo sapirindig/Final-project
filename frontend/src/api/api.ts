@@ -5,7 +5,7 @@ import { User } from "./types/User";
 import axios, { AxiosResponse } from "axios";
 
 // Define the base URL for API requests
-const BASE_URL = "http://localhost:5000"; // Replace with your actual backend URL
+const BASE_URL = "http://aisocial.dev/api"; // Replace with your actual backend URL
 
 const getData = async <T>(
     request: Promise<AxiosResponse<T, unknown>>

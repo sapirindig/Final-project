@@ -146,9 +146,9 @@ const chatWithAI = async (req: Request, res: Response): Promise<void> => {
 
         if (externalUrl) {
           const savedFilename = await downloadImageToUploads(externalUrl);
-          generatedImageUrl = `http://localhost:3000/uploads/${savedFilename}`;
+          generatedImageUrl = `http://aisocial.dev/api/uploads/${savedFilename}`;
         } else {
-          generatedImageUrl = "http://localhost:3000/uploads/placeholder.png";
+          generatedImageUrl = "http://aisocial.dev/api/uploads/placeholder.png";
         }
       }
     }
@@ -166,7 +166,7 @@ const uploadImage = (req: Request, res: Response): void => {
     return;
   }
 
-  const imageUrl = `http://localhost:3000/uploads/${req.file.filename}`;
+  const imageUrl = `http://aisocial.dev/api/uploads/${req.file.filename}`;
   res.status(200).json({ imageUrl });
 };
 

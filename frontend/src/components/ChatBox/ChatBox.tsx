@@ -54,14 +54,14 @@ const ChatBox = () => {
         const formData = new FormData();
         formData.append("image", imageFile);
 
-        const uploadRes = await axios.post("http://localhost:3000/api/chat/image", formData, {
+        const uploadRes = await axios.post("http://aisocial.dev/api/api/chat/image", formData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
 
         imageUrl = uploadRes.data.imageUrl;
       }
 
-      const aiRes = await axios.post("http://localhost:3000/api/chat/message", {
+      const aiRes = await axios.post("http://aisocial.dev/api/api/chat/message", {
         message,
         imageUrl,
       });

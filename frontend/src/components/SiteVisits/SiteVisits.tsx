@@ -12,7 +12,7 @@ const SiteVisits: React.FC = () => {
     setActiveUsersYesterday(null);
 
     try {
-      const response = await axios.get('http://localhost:3000/analytics/site-visits');
+      const response = await axios.get('http://aisocial.dev/api/analytics/site-visits');
 
       const visitorsString = response.data.visitors;
       const visitorsNumber = parseInt(visitorsString, 10);

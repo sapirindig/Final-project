@@ -95,7 +95,7 @@ export const getOrGenerateSuggestions = async (req: Request, res: Response, next
                 if (item.imageUrls?.length) {
                     try {
                         const filename = await downloadImageToUploads(item.imageUrls[0]);
-                        item.imageUrls = [`http://localhost:3000/uploads/${filename}`];
+                        item.imageUrls = [`http://aisocial.dev/api/uploads/${filename}`];
                     } catch (e) {
                         console.error("[getOrGenerateSuggestions] Error downloading image for general suggestion:", e);
                         // במקרה של כשל, תשאיר ריק או ברירת מחדל
@@ -153,7 +153,7 @@ export const refreshSingleSuggestion = async (req: Request, res: Response, next:
         if (newContent.imageUrls?.length) {
             try {
                 const filename = await downloadImageToUploads(newContent.imageUrls[0]);
-                newContent.imageUrls = [`http://localhost:3000/uploads/${filename}`];
+                newContent.imageUrls = [`http://aisocial.dev/api/uploads/${filename}`];
             } catch (e) {
                 console.error("[refreshSingleSuggestion] Error downloading image for single suggestion refresh:", e);
                 newContent.imageUrls = [];
@@ -259,7 +259,7 @@ export const getOrGenerateUserSuggestions = async (req: Request, res: Response, 
                 if (item.imageUrls?.length) {
                     try {
                         const filename = await downloadImageToUploads(item.imageUrls[0]);
-                        item.imageUrls = [`http://localhost:3000/uploads/${filename}`];
+                        item.imageUrls = [`http://aisocial.dev/api/uploads/${filename}`];
                     } catch (e) {
                         console.error("[getOrGenerateUserSuggestions] Error downloading image for Instagram suggestion:", e);
                         item.imageUrls = [];

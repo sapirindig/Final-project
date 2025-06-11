@@ -12,7 +12,7 @@ const options = {
         },
         servers: [
             {
-                url: `http://localhost:${process.env.PORT || 3000}`,
+                url: `https://aisocial.dev/api || 3000}`,
             },
         ],
     },

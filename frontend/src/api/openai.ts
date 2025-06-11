@@ -18,7 +18,7 @@ export const generatePostFromAI = async ({
   const prompt = `Generate a ${length.toLowerCase()} ${contentType.toLowerCase()} post about "${keywords}", written in a ${writingStyle.toLowerCase()} tone, focusing on ${concept.toLowerCase()} theme.`;
 
   try {
-    const res = await axios.post('http://localhost:3000/api/chat/message', {
+    const res = await axios.post('http://aisocial.dev/api/api/chat/message', {
       message: prompt,
       imageUrl: '', // לא נדרש תמונה
     });
