@@ -47,7 +47,7 @@ const postToInstagram = async (file: File, caption: string, scheduledAt?: string
   if (scheduledAt) formData.append('scheduledAt', scheduledAt);
 
   try {
-    const res = await axios.post('http://aisocial.dev/api/api/instagram/post', formData, {
+    const res = await axios.post('https://aisocial.dev/api/api/instagram/post', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
     return res.data;
@@ -162,7 +162,7 @@ const HomePage: React.FC = () => {
     const fetchPopular = async () => {
       setIsLoadingPopular(true);
       try {
-        const res = await axios.get<{ posts: PopularPost[] }>("http://aisocial.dev/api/api/instagram/popular");
+        const res = await axios.get<{ posts: PopularPost[] }>("https://aisocial.dev/api/api/instagram/popular");
         setPopularContent(res.data.posts || []);
       } catch (err: any) {
         console.error("Failed to fetch popular posts:", err.response?.data || err.message);
@@ -197,7 +197,7 @@ const HomePage: React.FC = () => {
         }
 
         const res = await axios.get<AiSuggestion[]>(
-          `http://aisocial.dev/api/ai/suggestions/user/${userId}`,
+          `https://aisocial.dev/api/ai/suggestions/user/${userId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -224,7 +224,7 @@ const HomePage: React.FC = () => {
 
     const fetchMonthlyStats = async () => {
       try {
-        const res = await axios.get("http://aisocial.dev/api/api/instagram/monthly");
+        const res = await axios.get("https://aisocial.dev/api/api/instagram/monthly");
         setMonthlyStats(res.data || []);
       } catch (err: any) {
         console.error("Failed to fetch monthly stats:", err.response?.data || err.message);

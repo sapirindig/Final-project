@@ -106,36 +106,85 @@ router.post("/instagram/callback", authMiddleware, async (req: Request, res: Res
   }
 
   try {
-    // Exchange code for access token
-    const tokenResponse = await axios.post<InstagramTokenResponse>('https://api.instagram.com/oauth/access_token', {
-      client_id: process.env.INSTAGRAM_APP_ID,
-      client_secret: process.env.INSTAGRAM_APP_SECRET,
+    console.log('Starting Instagram auth process with:', { 
+      code: code.substring(0, 10) + '...',
+      userId,
+      redirectUri: process.env.INSTAGRAM_REDIRECT_URI
+    });
+
+    // Exchange code for access token using Meta App credentials
+    const tokenUrl = 'https://api.instagram.com/oauth/access_token';
+    const formData = new URLSearchParams({
+      client_id: '665994033060068',  // Your Meta App ID
+      client_secret: process.env.META_APP_SECRET!, // Using META_APP_SECRET consistently
       grant_type: 'authorization_code',
-      redirect_uri: process.env.INSTAGRAM_REDIRECT_URI,
-      code
+      redirect_uri: process.env.INSTAGRAM_REDIRECT_URI!,
+      code: code
+    });
+
+    console.log('Making token exchange request with Meta App credentials');
+
+    const tokenResponse = await axios.post<InstagramTokenResponse>(
+      tokenUrl,
+      formData.toString(),
+      {
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      }
+    );
+
+    console.log('Token exchange response:', {
+      status: tokenResponse.status,
+      hasAccessToken: !!tokenResponse.data.access_token,
+      hasUserId: !!tokenResponse.data.user_id
     });
 
     const { access_token, user_id } = tokenResponse.data;
 
     // Get long-lived access token
-    const longLivedTokenResponse = await axios.get<LongLivedTokenResponse>('https://graph.instagram.com/access_token', {
+    const longLivedTokenUrl = 'https://graph.instagram.com/access_token';
+    console.log('Requesting long-lived token from:', longLivedTokenUrl);
+
+    const longLivedTokenResponse = await axios.get<LongLivedTokenResponse>(longLivedTokenUrl, {
       params: {
         grant_type: 'ig_exchange_token',
-        client_secret: process.env.INSTAGRAM_APP_SECRET,
+        client_secret: process.env.META_APP_SECRET, // Changed from INSTAGRAM_APP_SECRET to META_APP_SECRET
         access_token
       }
     });
 
-    // Store the tokens in your database
+    console.log('Long-lived token response:', {
+      status: longLivedTokenResponse.status,
+      hasToken: !!longLivedTokenResponse.data.access_token,
+      expiresIn: longLivedTokenResponse.data.expires_in
+    });
+
+    // Store the tokens
     await User.findByIdAndUpdate(userId, {
       instagramAccessToken: longLivedTokenResponse.data.access_token,
       instagramUserId: user_id
     });
 
     res.json({ success: true });
-  } catch (error) {
-    console.error('Instagram auth error:', error);
-    res.status(500).json({ error: 'Failed to authenticate with Instagram' });
+  } catch (error: any) {
+    console.error('Instagram auth error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      headers: error.response?.headers,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        params: error.config?.params,
+        headers: error.config?.headers
+      }
+    });
+
+    res.status(500).json({ 
+      error: 'Failed to authenticate with Instagram', 
+      details: error.response?.data || error.message 
+    });
   }
 });
 

@@ -41,7 +41,7 @@ const PostGenerator = () => {
 
   const handlePublish = async () => {
     try {
-      await axios.post('http://aisocial.dev/api/api/posts', {
+      await axios.post('https://aisocial.dev/api/api/posts', {
         content: generatedPost,
         tags: keywords.split(',').map((kw) => kw.trim()),
         category: concept,

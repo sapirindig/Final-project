@@ -54,6 +54,8 @@ const BusinessProfileForm: React.FC = () => {
   });
 
   const [hasChanges, setHasChanges] = useState(false);
+  const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+  const [isGAConnected, setIsGAConnected] = useState(false);
 
   const markChanged = () => setHasChanges(true);
 
@@ -78,6 +80,24 @@ const BusinessProfileForm: React.FC = () => {
 
     fetchProfile();
   }, [token, userId]);
+
+  useEffect(() => {
+    const checkConnections = async () => {
+      try {
+        const user = JSON.parse(localStorage.getItem('user') || '{}');
+        if (user?.instagramUserId) {
+          setIsInstagramConnected(true);
+        }
+        if (user?.googleAnalyticsAccessToken) {
+          setIsGAConnected(true);
+        }
+      } catch (error) {
+        console.error('Error checking connections:', error);
+      }
+    };
+
+    checkConnections();
+  }, []);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
@@ -154,15 +174,15 @@ const BusinessProfileForm: React.FC = () => {
     }
   };
 
-  const connectInstagram = () => {
+  const connectInstagram = async () => {
     if (!token || !userId) {
       console.error("No authentication token or userId found");
       navigate('/login');
       return;
     }
 
-    const authUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=665994033060068&redirect_uri=aisocial.dev&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`;
-    
+    const authUrl = `https://www.instagram.com/oauth/authorize?enable_fb_login=0&force_authentication=1&client_id=665994033060068&redirect_uri=https://aisocial.dev/instagram-callback.html&response_type=code&scope=instagram_business_basic%2Cinstagram_business_manage_messages%2Cinstagram_business_manage_comments%2Cinstagram_business_content_publish%2Cinstagram_business_manage_insights`;
+                    
     const width = 600;
     const height = 700;
     const left = window.screenX + (window.innerWidth - width) / 2;
@@ -187,12 +207,19 @@ const BusinessProfileForm: React.FC = () => {
             },
             body: JSON.stringify({ 
               code: event.data.code,
-              userId: userId  // Add userId to the request body
+              userId 
             })
           });
 
           if (response.ok) {
-            const data = await response.json();
+            setIsInstagramConnected(true);
+            // Update localStorage with new user data
+            const userData = await response.json();
+            const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+            localStorage.setItem('user', JSON.stringify({
+              ...currentUser,
+              instagramUserId: userData.instagramUserId
+            }));
             alert("Successfully connected to Instagram!");
           } else {
             throw new Error("Failed to exchange Instagram code");
@@ -203,6 +230,36 @@ const BusinessProfileForm: React.FC = () => {
         }
       }
     }, { once: true });
+  };
+
+  const connectGoogleAnalytics = () => {
+    if (!token || !userId) {
+      console.error("No authentication token or userId found");
+      navigate('/login');
+      return;
+    }
+
+    const redirectUri = encodeURIComponent('https://aisocial.dev/ga-callback.html');
+    const scope = encodeURIComponent('https://www.googleapis.com/auth/analytics.readonly');
+    
+    const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=306297552838-uc0cq7vkdueavh5r1920o3oefgpj2k03.apps.googleusercontent.com` +
+      `&redirect_uri=${redirectUri}` +
+      `&response_type=code` +
+      `&scope=${scope}` +
+      `&access_type=offline` +
+      `&prompt=consent`;
+
+    const width = 600;
+    const height = 700;
+    const left = window.screenX + (window.innerWidth - width) / 2;
+    const top = window.screenY + (window.innerHeight - height) / 2;
+
+    const popup = window.open(
+      authUrl,
+      "GoogleAnalyticsAuth",
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    );
   };
 
   if (!isLoggedIn || !token || !userId) {
@@ -333,8 +390,23 @@ const BusinessProfileForm: React.FC = () => {
 
       {/* כפתורים */}
       <div className="form-buttons mt-4 flex gap-4">
-        <button type="button" className="instagram-connect-button" onClick={connectInstagram}>
-          <img src={instagramIcon} alt="Instagram" /> Connect Instagram
+        <button 
+          type="button" 
+          className={`instagram-connect-button ${isInstagramConnected ? 'connected' : ''}`} 
+          onClick={isInstagramConnected ? undefined : connectInstagram}
+          disabled={isInstagramConnected}
+        >
+          <img src={instagramIcon} alt="Instagram" />
+          {isInstagramConnected ? 'Instagram Connected' : 'Connect Instagram'}
+        </button>
+
+        <button 
+          type="button" 
+          className={`google-analytics-connect-button ${isGAConnected ? 'connected' : ''}`} 
+          onClick={isGAConnected ? undefined : connectGoogleAnalytics}
+          disabled={isGAConnected}
+        >
+          {isGAConnected ? 'Google Analytics Connected' : 'Connect Google Analytics'}
         </button>
 
         <button type="submit" className="save-button" disabled={!hasChanges}>

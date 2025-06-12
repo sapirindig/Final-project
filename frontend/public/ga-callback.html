@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Instagram Authorization</title>
+  <title>Google Analytics Authorization</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -20,12 +20,12 @@
     
     if (code) {
       window.opener.postMessage({ 
-        type: 'INSTAGRAM_AUTH', 
+        type: 'GA_AUTH', 
         code 
       }, window.location.origin);
     } else if (error) {
       window.opener.postMessage({ 
-        type: 'INSTAGRAM_AUTH_ERROR', 
+        type: 'GA_AUTH_ERROR', 
         error 
       }, window.location.origin);
     }

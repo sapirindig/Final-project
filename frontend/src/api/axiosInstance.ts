@@ -1,7 +1,7 @@
 import axios from "axios";
 
 export default axios.create({
-  baseURL: "http://aisocial.dev/api/",
+  baseURL: "https://aisocial.dev/api/",
 });
 
 axios.interceptors.request.use(

@@ -129,6 +129,65 @@
   filter: none;
 }
 
+.instagram-connect-button.connected {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  cursor: default;
+  border: 1px solid #81c784;
+}
+
+.instagram-connect-button.connected:hover {
+  background-color: #e8f5e9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.instagram-connect-button.connected img {
+  opacity: 0.7;
+}
+
+.instagram-connect-button:disabled {
+  cursor: not-allowed;
+}
+
+/* Google Analytics Connect button */
+.google-analytics-connect-button {
+  background-color: #fff;
+  color: #333;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.google-analytics-connect-button:hover:not(.connected) {
+  background-color: #f0f0f0;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.15);
+}
+
+.google-analytics-connect-button.connected {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  cursor: default;
+  border: 1px solid #81c784;
+}
+
+.google-analytics-connect-button.connected:hover {
+  background-color: #e8f5e9;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.google-analytics-connect-button:disabled {
+  cursor: not-allowed;
+}
+
 /* container for both buttons */
 .form-buttons {
   display: flex;

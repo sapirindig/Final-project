@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { google } from 'googleapis';
+import User from '../models/user_model';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -97,4 +98,60 @@ const getSiteVisits = async (req: Request, res: Response): Promise<void> => {
     }
 };
 
-export default { getSiteVisits };
+interface GoogleAnalyticsTokenResponse {
+  access_token: string;
+  refresh_token: string;
+  scope: string;
+  token_type: string;
+  expiry_date: number;
+}
+
+const connectGoogleAnalytics = async (req: Request, res: Response): Promise<void> => {
+  const { code, userId } = req.body;
+
+  if (!code || !userId) {
+    res.status(400).json({ error: 'Missing code or userId' });
+    return;
+  }
+
+  try {
+    console.log('Starting Google Analytics auth process with:', { 
+      code: code.substring(0, 10) + '...',
+      userId,
+      redirectUri: process.env.GOOGLE_REDIRECT_URI
+    });
+
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      process.env.GOOGLE_REDIRECT_URI
+    );
+
+    console.log('Making token exchange request with Google credentials');
+
+    const { tokens } = await oauth2Client.getToken(code);
+    
+    console.log('Token exchange response:', {
+      hasAccessToken: !!tokens.access_token,
+      hasRefreshToken: !!tokens.refresh_token,
+      scope: tokens.scope
+    });
+
+    // Store tokens in database
+    await User.findByIdAndUpdate(userId, {
+      googleAnalyticsAccessToken: tokens.access_token,
+      googleAnalyticsRefreshToken: tokens.refresh_token,
+      googleAnalyticsPropertyId: process.env.GOOGLE_ANALYTICS_PROPERTY_ID // Use the property ID from env
+    });
+
+    res.json({ success: true });
+  } catch (error: any) {
+    console.error('Google Analytics auth error:', error);
+    res.status(500).json({ 
+      error: 'Failed to authenticate with Google Analytics',
+      details: error.message 
+    });
+  }
+};
+
+export default { getSiteVisits, connectGoogleAnalytics };
