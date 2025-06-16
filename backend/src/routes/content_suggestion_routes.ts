@@ -2,9 +2,9 @@ import express from "express";
 import auth from "../middlewares/authMiddleware";
 import {
   getOrGenerateSuggestions,
-  getOrGenerateUserSuggestions,
   refreshSingleSuggestion,
 } from "../controllers/content_suggestion_controller";
+import { generateSuggestionsFromPopularPosts } from "../controllers/popular_post_suggestions";
 
 const router = express.Router();
 
@@ -113,7 +113,6 @@ router.put("/suggestions/:suggestionId/refresh", auth, refreshSingleSuggestion);
 // מסלול ליצירת הצעות על סמך פרופיל עסקי לפי userId (למקרה שמתבצע מבחוץ עם userId)
 router.get("/suggestions/business/:userId", getOrGenerateSuggestions);
 
-// ✅ מסלול להצעות לפי ניתוח פרופיל אינסטגרם של המשתמש
-router.get("/suggestions/user/:userId", getOrGenerateUserSuggestions);
+router.get("/content/instagram/generate-from-popular/:userId", generateSuggestionsFromPopularPosts);
 
 export default router;
