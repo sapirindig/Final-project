@@ -196,14 +196,14 @@ const HomePage: React.FC = () => {
           return;
         }
 
-        const res = await axios.get<AiSuggestion[]>(
-          `http://localhost:3000/ai/suggestions/user/${userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
+      const res = await axios.get<AiSuggestion[]>(
+        `http://localhost:3000/ai/content/instagram/generate-from-popular/${userId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
         console.log("[fetchSuggestions] Response data:", res.data);
 
