@@ -28,14 +28,11 @@ padding: 40px 10px 40px 10px;
 
 
 .header-container {
-  margin-bottom: 30px;
-  text-align: left; /* יישור לשמאל */
-  padding-left: 10px; /* כדי להתאים לרובריקות */
-  max-width: 800px; /* זהה לרוחב הקוביות */
-  margin-left: 10px;
-  padding-bottom: 10px;
-border-bottom: 1px solid #e0e0e0;
-
+  margin: 0 auto 30px auto; 
+  text-align: center; 
+  padding: 0 20px 10px 20px;
+  max-width: 800px;
+  border-bottom: 1px solid #e0e0e0;
 }
 
 
