@@ -246,7 +246,8 @@ const HomePage: React.FC = () => {
       </header>
 
       <main className="homepage-main">
-        <section className="section-box full-width-section" style={{ marginBottom: 30 }}>
+        <section className="section-box" style={{ marginBottom: 30 }}>
+
           <h2>Post Image to Instagram</h2>
 
           <input
